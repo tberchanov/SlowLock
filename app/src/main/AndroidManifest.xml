@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SlowLock">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SlowLock"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            The target of every pinned shortcut. Its android:name is FROZEN - it is written
+            into each shortcut's persisted intent (contracts/pinned-shortcut.md), and
+            ShortcutContractTest fails the build if the class ever moves.
+
+            exported="false" is correct and deliberate: the launcher does not start this
+            intent itself, it calls LauncherApps.startShortcut() and the system starts the
+            intent under SlowLock's own identity, so no export is needed (research.md R5).
+
+            The remaining four attributes are FR-019 together with the translucent theme -
+            no visible SlowLock screen, no recents entry (research.md R6).
+        -->
+        <activity
+            android:name=".shortcut.ShortcutLaunchActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.SlowLock.Invisible" />
+    </application>
+
+</manifest>

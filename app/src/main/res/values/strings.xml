@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">SlowLock</string>
+    <string name="app_list_search_hint">Search apps</string>
+    <string name="app_list_clear_query">Clear search</string>
+    <string name="app_list_empty">No apps to show.</string>
+    <string name="app_list_no_results">No apps match \"%1$s\".</string>
+    <string name="app_list_unavailable">That app is no longer available.</string>
+    <string name="app_list_icon_description">%1$s icon</string>
+
+    <string name="shortcut_config_title">New shortcut</string>
+    <string name="shortcut_config_back">Back</string>
+    <string name="shortcut_config_create">Create shortcut</string>
+    <string name="shortcut_treatment_original">Original</string>
+    <string name="shortcut_treatment_invert">Inverted</string>
+    <string name="shortcut_treatment_gray">Gray</string>
+    <string name="shortcut_target_unavailable">That app is no longer available, so no shortcut was created.</string>
+    <string name="shortcut_launch_unavailable">That app is no longer available.</string>
+    <string name="shortcut_icon_unavailable">That app\'s icon couldn\'t be loaded, so no shortcut can be created right now. Go back and try again.</string>
+    <string name="pin_unsupported_message">Your home screen won\'t let SlowLock add icons to it. Switching to a different home screen app should fix this.</string>
+    <string name="pin_unsupported_open_settings">Choose home screen app</string>
+    <string name="pin_unsupported_recheck">Check again</string>
+    <string name="pin_unsupported_settings_failed">That setting couldn\'t be opened on this device. You can change your home screen app from your phone\'s settings.</string>
+</resources>

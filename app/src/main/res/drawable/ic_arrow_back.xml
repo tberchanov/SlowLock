@@ -1,0 +1,20 @@
+<!--
+  The back arrow for the shortcut configuration screen's back affordance (FR-020, C13).
+
+  Drawn locally rather than taken from `androidx.compose.material:material-icons-core`, which is
+  not on the classpath: recent Material 3 releases no longer bring it in transitively, and adding
+  a whole icon library for one glyph is the dependency Constitution II tells us to refuse.
+
+  `autoMirrored` so the arrow points the other way under an RTL locale. No `android:tint` here —
+  Compose's `Icon` tints it from the theme, and a tint baked in would override that.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:autoMirrored="true">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z" />
+</vector>

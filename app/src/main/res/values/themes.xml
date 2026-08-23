@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.SlowLock" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+        The theme for ShortcutLaunchActivity: the activity must never be seen.
+        Translucent rather than android:Theme.NoDisplay, which throws on modern API
+        levels if the activity does not finish before onResume (research.md R6).
+        Not part of the frozen contract - the delay feature replaces it with a
+        visible countdown theme.
+    -->
+    <style name="Theme.SlowLock.Invisible" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+</resources>
