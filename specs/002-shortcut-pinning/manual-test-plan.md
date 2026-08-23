@@ -142,11 +142,11 @@ reality and are re-written as part of this work.
 
 The feature is not complete until:
 
-- [ ] `./gradlew assembleDebug` passes
-- [ ] `./gradlew test` passes
-- [ ] M1–M3 pass on at least one device
+- [X] `./gradlew assembleDebug` passes
+- [X] `./gradlew test` passes
+- [X] M1–M3 pass on at least one device
 - [ ] M4 run on two vendors' launchers, with the results table filled in — successes or recorded failures (SC-008)
-- [ ] M5 run on a physical device, including a real reboot (SC-007)
+- [X] M5 run on a physical device, including a real reboot (SC-007)
 - [X] M6 run against an unsupported launcher or a stub (SC-009)
-- [ ] M7 confirms feature 001 still behaves, with T1.12/T1.16 updated
+- [X] M7 confirms feature 001 still behaves, with T1.12/T1.16 updated
 - [ ] Behaviour under Xiaomi Dual Apps recorded as tested or explicitly untested (Constitution, Manual verification)
