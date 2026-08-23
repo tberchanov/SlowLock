@@ -4,13 +4,33 @@
     <style name="Theme.SlowLock" parent="android:Theme.Material.Light.NoActionBar" />
 
     <!--
-        The theme for ShortcutLaunchActivity: the activity must never be seen.
-        Translucent rather than android:Theme.NoDisplay, which throws on modern API
-        levels if the activity does not finish before onResume (research.md R6).
-        Not part of the frozen contract - the delay feature replaces it with a
-        visible countdown theme.
+        The theme for ShortcutLaunchActivity, which is now meant to be SEEN. This replaces
+        feature 002's Theme.SlowLock.Invisible, whose entire job was the opposite.
+
+        windowBackground is the same colour resource WaitScreen paints (research.md R7,
+        obligation W12). Without that, the system paints the starting window in the app
+        theme's background and the screen changes colour a frame later - a flash, on the one
+        screen that must not move. With it, the tap lands on the final background immediately
+        (FR-022) and the only subsequent change is the text appearing.
+
+        A DayNight parent so the system chrome around the STARTING window follows the device's
+        light/dark setting; matching only in light mode would leave a white flash at night
+        (manual case M4.9). @color/wait_background itself resolves through values-night on its
+        own, by configuration, whatever the parent is.
+
+        The parent is android:Theme.DeviceDefault.DayNight rather than the
+        android:Theme.Material.DayNight.NoActionBar named in tasks.md T013: the platform ships
+        no Material DayNight variant at all (Theme.Material is Light or dark, never both), and
+        AppCompat's DayNight would mean a new dependency this feature is forbidden to add. The
+        DeviceDefault DayNight family is the only platform theme that switches, and it has no
+        NoActionBar variant, so the two window attributes below do that job.
+
+        android:windowDisablePreview is deliberately NOT carried over: the wait screen wants a
+        starting window, where the invisible activity wanted none.
     -->
-    <style name="Theme.SlowLock.Invisible" parent="android:Theme.Translucent.NoTitleBar">
-        <item name="android:windowDisablePreview">true</item>
+    <style name="Theme.SlowLock.Wait" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/wait_background</item>
     </style>
 </resources>

@@ -32,10 +32,10 @@ that produced it — a recorded failure is a result, not a blocked test.
 
 | # | Steps | Expected | Requirement |
 |---|---|---|---|
-| M1.1 | Open the app, tap any row | The configuration screen opens; the app does **not** launch | FR-001 |
+| M1.1 | Open the app, tap any row | ~~The configuration screen opens~~; the app does **not** launch. **Superseded by 003 M1.1** — a row tap now opens the **delay** screen, and this screen is reached with "next". The app still does not launch | FR-001, superseded |
 | M1.2 | Look at the preview | The target's icon and label, centred, at roughly home-screen proportions | FR-003, C2 |
 | M1.3 | Look at the treatment row | Above the preview, horizontally scrollable, exactly Original / Invert / Gray in that order | FR-005, C3 |
-| M1.4 | Note the initial selection | Original, and the preview is unmodified | FR-006 |
+| M1.4 | Note the initial selection | Original, and the preview is unmodified — **only for an app with no saved configuration**. **Narrowed by 003 M3.2**: a previously configured app opens on its saved treatment | FR-006, narrowed |
 | M1.5 | Tap Invert | Colours invert instantly. **Transparent areas stay transparent** — not a solid black square | FR-007, R7 |
 | M1.6 | Tap Gray | Desaturated instantly | FR-007 |
 | M1.7 | Switch treatments repeatedly and quickly | No flicker, no layout shift, no lag | SC-004, C5 |
@@ -51,8 +51,8 @@ that produced it — a recorded failure is a result, not a blocked test.
 |---|---|---|---|
 | M2.1 | Pick an app, keep Original, press "Create shortcut" | The screen closes back to the list. The launcher may show a confirmation or may pin silently — **both correct**. The app itself shows nothing | FR-010, FR-012 |
 | M2.2 | Find the new icon on the home screen | One icon, the target's label, the previewed icon | FR-010, SC-003 |
-| M2.3 | Tap it | The target app opens immediately — no countdown, no intermediate screen, no delay | FR-016, SC-002 |
-| M2.4 | Watch closely while tapping | No SlowLock screen flashes, not even for a frame | FR-019 |
+| M2.3 | Tap it | ~~The target app opens immediately — no intermediate screen, no delay.~~ **Superseded by 003 M5.1**: the wait screen appears for the app's configured delay, then the target opens. "No countdown" is the one clause that survives, and 003 M4 now tests it as a design obligation | FR-016, superseded |
+| M2.4 | Watch closely while tapping | ~~No SlowLock screen flashes, not even for a frame.~~ **Superseded by 003 M4**: a SlowLock screen is now the point — it is shown deliberately, for the whole delay. What survives is that nothing flashes *on the way in or out* of it, which 003 M4.1 and M5.3 cover | FR-019, superseded |
 | M2.5 | Open the recents switcher | The target is there; **SlowLock is not** | FR-019 |
 | M2.6 | Repeat M2.1–M2.3 with Invert, on a different app | The pinned icon is inverted and matches what the preview showed | SC-003 |
 | M2.7 | Time the whole flow from the list | ≤3 taps past selecting the app, under 30 seconds | SC-001 |
@@ -102,8 +102,17 @@ feature exists to produce.
 | M5.3 | Clear SlowLock from recents, tap the shortcut | The target opens | FR-017 |
 | M5.4 | After M5.2, check the icon still shows the treatment chosen at pin time | Unchanged | FR-010 |
 
+> **Amended by feature 003 (M6.1, M6.3).** In M5.1 to M5.3 the target no longer opens
+> *immediately*: **the wait screen appears first, for the app's configured delay, and the target
+> opens after it.** The delay is read off disk on the launch path, so a force-stopped or
+> just-rebooted process reads it exactly as a warm one does — which makes these three cases
+> **stronger** evidence than they were, not weaker. `specs/003-launch-delay/manual-test-plan.md`
+> M6.1 and M6.3 supersede them and are the versions to run. M5.4 is unaffected.
+
 A failure here means the launch path depends on SlowLock's process state, which the design
-forbids (`contracts/pinned-shortcut.md`, L6).
+forbids (`contracts/pinned-shortcut.md`, L6). Feature 003 did not weaken that: it added a disk
+read to the same path, and `DelayConfigStore` answers with the default rather than failing when
+nothing is stored, so a wait still runs with no in-process state whatsoever.
 
 ---
 

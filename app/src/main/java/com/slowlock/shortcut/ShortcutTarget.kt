@@ -1,6 +1,10 @@
 package com.slowlock.shortcut
 
+import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
+import android.content.pm.PackageManager
+import android.os.Process
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -60,3 +64,44 @@ suspend fun resolveTarget(
         versionCode = loadVersionCode(packageName),
     )
 }
+
+/**
+ * Resolves the display facts for [packageName], off the main thread (FR-024).
+ *
+ * It lives beside [resolveTarget] rather than inside one of its callers because both
+ * configuration screens re-resolve: the delay screen to show which app is being configured
+ * (003 obligations D1, D2), the shortcut screen to preview it and again before pinning. Two
+ * copies of the wiring would be two places for the label rule below to drift.
+ *
+ * The label comes from `LauncherApps` and the lowest-labelled activity wins, which is the same
+ * rule `dedupeByPackage` applies in feature 001 — so both screens show the same text the row the
+ * user tapped did, rather than an `ApplicationInfo` label that can differ.
+ */
+suspend fun resolveShortcutTarget(
+    context: Context,
+    packageName: String,
+): ShortcutTarget? {
+    val packageManager = context.packageManager
+    val launcherApps = context.getSystemService(LauncherApps::class.java)
+
+    return resolveTarget(
+        packageName = packageName,
+        resolveLaunchIntent = { packageManager.getLaunchIntentForPackage(it) },
+        loadLabel = {
+            runCatching {
+                launcherApps.getActivityList(it, Process.myUserHandle())
+                    .minOfOrNull { activity -> activity.label.toString() }
+            }.getOrNull()
+        },
+        loadVersionCode = {
+            runCatching {
+                packageManager
+                    .getPackageInfo(it, PackageManager.PackageInfoFlags.of(0))
+                    .longVersionCode
+            }.getOrDefault(UNKNOWN_VERSION)
+        },
+    )
+}
+
+/** A package that vanished mid-resolution still gets a usable, stable cache key. */
+private const val UNKNOWN_VERSION = 0L

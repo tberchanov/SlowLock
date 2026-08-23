@@ -5,6 +5,13 @@
 Draft UI, expected to be replaced by the delay-configuration screen it is a stand-in for. What
 it must not do is compromise `contracts/pinned-shortcut.md`, which is frozen.
 
+> **Amended by feature 003.** The expectation in that first sentence turned out to be wrong in an
+> instructive way: this screen was **not** replaced. Feature 003 put `DelayConfigScreen` *in front
+> of* it and widened this seam instead — the treatment, the preview and the pin all stayed here.
+> The reasoning for every change below lives in
+> `specs/003-launch-delay/contracts/delay-config-screen.md` (obligations C15–C18); this document
+> records what the seam now is. The second sentence held: `pinned-shortcut.md` is untouched.
+
 ---
 
 ## Signature
@@ -13,18 +20,33 @@ it must not do is compromise `contracts/pinned-shortcut.md`, which is frozen.
 @Composable
 fun ShortcutConfigScreen(
     packageName: String,
-    onDone: () -> Unit,
+    delaySeconds: Int,                 // added by 003 — saved with the treatment on apply (C16)
+    initialTreatment: IconTreatment,   // added by 003 — the saved treatment, or Original (C15)
+    onBack: () -> Unit,                // added by 003 — the two cancel paths
+    onCreated: () -> Unit,             // added by 003 — the apply path
     modifier: Modifier = Modifier,
 )
 ```
 
 One `String` in — the seam feature 001 hands across (`selection-handoff.md`). Label, icon, and
-version code are re-resolved here, never carried across (obligation C3).
+version code are re-resolved here, never carried across (obligation C3). Feature 003 added two
+*values* alongside it but no resolved metadata: `delaySeconds` and `initialTreatment` are choices
+the caller already made, not facts about the app, so C3 is unweakened.
 
-`onDone` is invoked for **every** exit — created, backed out, system back. The caller cannot
-tell which, and must not need to: FR-012 says the app shows no confirmation, so "created" and
-"cancelled" are the same event as far as navigation is concerned. A callback that reported the
-outcome would invite exactly the message the spec forbids.
+~~`onDone` is invoked for **every** exit — created, backed out, system back. The caller cannot
+tell which, and must not need to.~~
+
+> **Amended by feature 003 (C17).** `onDone` split into `onBack` and `onCreated`, because 003's
+> FR-014 makes the caller need to know: back returns to the delay screen with the chosen delay
+> intact, creating returns to the list. Two exits that lead to different places cannot share one
+> callback.
+>
+> **The original reason still holds and is why the split is safe.** It was never about hiding the
+> outcome from the *caller* — it was that a callback reporting success invites the confirmation
+> message FR-012 forbids. Neither new callback says anything to the user, and this screen still
+> **cannot distinguish a honoured pin from a declined one**, because the launcher does not tell
+> it. `onCreated` means "the save and the pin request were both issued", not "an icon exists".
+> What split is navigation. Nothing about feedback changed.
 
 ---
 
@@ -81,6 +103,18 @@ Transitions: a row tap sets the selection (FR-001, replacing 001's interim launc
 clears it (FR-012, FR-020, FR-021); support flipping to `Unsupported` at any point takes over
 the root, configuration screen included (FR-013); flipping to `Supported` moves the user on
 with no restart (FR-032).
+
+> **Amended by feature 003 (N1–N5).** The root now holds a three-case `Stage` rather than a
+> nullable selection, because there are three screens behind the gate and the middle one carries
+> state: `List`, `Delay(packageName, seconds, treatment)`, `Shortcut(packageName, seconds,
+> treatment)`. A row tap **reads the configuration store before it navigates**, so both
+> configuration screens open on the app's saved values. The chosen delay and treatment live on
+> the stage rather than in either screen, which is what lets the trip to the shortcut screen and
+> back preserve them.
+>
+> **The support gate is unchanged and still wraps everything**, the new screen included — the row
+> above reads "configuration screen included" and now means both of them. So is the scroll and
+> query restoration below, which survives a two-screen round trip rather than a one-screen one.
 
 Returning to the list restores the scroll position and the search query (FR-022). The list and
 query survive in `AppListViewModel`; the scroll offset needs

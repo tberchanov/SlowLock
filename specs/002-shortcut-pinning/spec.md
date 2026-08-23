@@ -156,9 +156,14 @@ no new home-screen icon exists.
 
 #### Entering the screen
 
-- **FR-001**: Tapping an app in the installed-apps list MUST open the shortcut configuration
-  screen for that app. This **replaces** the interim behaviour from feature 001, where a tap
+- **FR-001**: ~~Tapping an app in the installed-apps list MUST open the shortcut configuration
+  screen for that app.~~ This **replaces** the interim behaviour from feature 001, where a tap
   launched the target app directly. Reachable only where pinning is supported (FR-028).
+  > **Superseded by feature 003 (FR-001).** A row tap now opens the **delay** screen; the
+  > shortcut configuration screen sits behind it and is reached with "next". The replacement is
+  > of the same kind this requirement itself performed on feature 001 — see
+  > `specs/003-launch-delay/spec.md`. Everything else here still holds: the tap still does not
+  > launch the target, and the flow is still reachable only where pinning is supported.
 - **FR-002**: The configuration screen MUST identify its target app by package name only.
 
 #### When pinning is unsupported
@@ -187,7 +192,13 @@ no new home-screen icon exists.
 
 - **FR-005**: The screen MUST present a horizontally scrollable row of icon treatments,
   positioned above the preview, containing exactly three options: Original, Invert, and Gray.
-- **FR-006**: Original MUST be the selection when the screen first opens.
+- **FR-006**: Original MUST be the selection when the screen first opens **for an app with no
+  saved configuration**.
+  > **Narrowed by feature 003 (FR-013).** An app configured before opens on its **saved**
+  > treatment instead. Original remains the opening selection only because that is what the
+  > configuration store answers for an app it has never seen — the screen is handed an
+  > `initialTreatment` and cannot tell the two cases apart. See
+  > `specs/003-launch-delay/spec.md`.
 - **FR-007**: Selecting a treatment MUST update the preview without a perceptible delay and
   without the user taking any further action.
 - **FR-008**: The selected treatment MUST survive screen recreation.
@@ -228,9 +239,18 @@ no new home-screen icon exists.
 
 #### The pinned shortcut's behaviour
 
-- **FR-016**: Tapping a pinned shortcut MUST open its target app immediately — no countdown,
-  no schedule check, no intermediate screen. *(Draft behaviour; the delay arrives with its own
+- **FR-016**: ~~Tapping a pinned shortcut MUST open its target app immediately — no countdown,
+  no schedule check, no intermediate screen.~~ *(Draft behaviour; the delay arrives with its own
   spec.)*
+  > **Superseded by feature 003 (FR-021 to FR-029).** The delay arrived, as this requirement
+  > anticipated. A pinned shortcut now shows a motionless wait screen for the app's configured
+  > delay and only then opens the target. "No countdown" survives the supersession and is now
+  > a design obligation in its own right — the wait screen is deliberately without countdown,
+  > progress, or any moving element. See `specs/003-launch-delay/spec.md`.
+  >
+  > Note what did **not** change: the shortcuts pinned under this feature picked the wait up
+  > with nothing re-pinned and nothing asked of the user, because the delay is read at tap time
+  > rather than carried in the intent. `contracts/pinned-shortcut.md` is untouched.
 - **FR-017**: A pinned shortcut MUST keep working after SlowLock has been force-stopped and
   after the device has been rebooted.
 - **FR-018**: If a pinned shortcut's target app no longer resolves when tapped, the app MUST

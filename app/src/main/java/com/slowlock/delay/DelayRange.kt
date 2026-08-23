@@ -1,0 +1,57 @@
+package com.slowlock.delay
+
+/**
+ * The bounds of the delay slider, and the pure mapping between a position on it and a whole
+ * number of seconds (data-model.md §`DelayRange`).
+ *
+ * Pure Kotlin with no Compose import, which is what lets `DelayRangeTest` assert the off-by-one
+ * in [SLIDER_STEPS] without a device — the kind of error that yields a slider looking entirely
+ * correct while landing on the wrong values.
+ *
+ * These three numbers are the spec's provisional values and are **not** frozen. They are cheap to
+ * change: nothing outside this object depends on them, and the store deliberately does not clamp
+ * to them (`contracts/delay-config-store.md`).
+ */
+object DelayRange {
+
+    /** The shortest wait the screen can produce. */
+    const val MIN_SECONDS = 1
+
+    /** The longest wait the screen can produce. */
+    const val MAX_SECONDS = 30
+
+    /**
+     * Every reachable value is a multiple of this (FR-005).
+     *
+     * At `1` that is every whole second in the range, so [snap] is the identity inside it and
+     * the stops exist only to keep the slider's `Float` off the state. The constant stays because
+     * the range is provisional: a coarser step is a one-line change here and nowhere else.
+     */
+    const val STEP_SECONDS = 1
+
+    /** How many values the slider can land on, endpoints included. Derived, never written down. */
+    val STOPS: Int = (MAX_SECONDS - MIN_SECONDS) / STEP_SECONDS + 1
+
+    /**
+     * What Material's `Slider` wants for `steps`: the number of stops **between** the endpoints,
+     * so two fewer than [STOPS].
+     *
+     * Derived rather than written, because `28` typed by hand next to a range of 30 stops is the
+     * exact off-by-one that survives review. Asserted in `DelayRangeTest`.
+     */
+    val SLIDER_STEPS: Int = STOPS - 2
+
+    /**
+     * Clamps [seconds] into `[MIN_SECONDS, MAX_SECONDS]`, then rounds to the nearest
+     * [STEP_SECONDS].
+     *
+     * The screen applies this to the slider's `Float` before it becomes state, so the displayed
+     * number, the stored number, and the handle's position are the same value at all times
+     * (FR-007).
+     */
+    fun snap(seconds: Int): Int {
+        val offset = seconds.coerceIn(MIN_SECONDS, MAX_SECONDS) - MIN_SECONDS
+        val rounded = (offset + STEP_SECONDS / 2) / STEP_SECONDS * STEP_SECONDS
+        return MIN_SECONDS + rounded
+    }
+}

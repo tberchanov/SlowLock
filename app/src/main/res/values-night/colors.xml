@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        The dark counterparts of the wait screen's two colours (obligation W12).
+
+        **Not optional.** Without this file the wait screen is a full-brightness white field at
+        night - on the one screen in the app designed not to be noticed, and the one screen a
+        user is most likely to meet in a dark room, while every other screen follows the system
+        setting. It is also the difference between a matched starting window and a white flash
+        in dark mode (manual case M4.9).
+
+        Muted rather than pure black-on-white in both modes: legible, and nothing more.
+    -->
+    <color name="wait_background">#FF101010</color>
+    <color name="wait_text">#FF9E9E9E</color>
+</resources>

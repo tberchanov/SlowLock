@@ -1,9 +1,6 @@
 package com.slowlock.shortcut
 
 import android.content.Context
-import android.content.pm.LauncherApps
-import android.content.pm.PackageManager
-import android.os.Process
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
@@ -51,32 +48,47 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.slowlock.R
 import com.slowlock.apps.AppIconCache
+import com.slowlock.delay.DelayConfig
+import com.slowlock.delay.DelayConfigStore
 import kotlinx.coroutines.launch
 
 /**
- * Draft UI: a preview of the shortcut about to be pinned, and a button that pins it.
+ * A preview of the shortcut about to be pinned, and the button that pins it.
  *
- * Expected to be replaced wholesale by the delay-configuration screen it stands in for. What it
- * must not do is compromise `contracts/pinned-shortcut.md`, which is frozen — everything this
- * screen hands to [ShortcutPinner] goes through the pure `shortcutSpec` derivation, so there is
- * no route from here to a shortcut of a different shape.
+ * Feature 002 expected this screen to be replaced wholesale by the delay-configuration screen it
+ * stood in for. It was not: feature 003 put `DelayConfigScreen` **in front of** it instead, and
+ * this screen kept the treatment, the preview, and the pin. What it must not do is compromise
+ * `contracts/pinned-shortcut.md`, which is frozen — everything this screen hands to
+ * [ShortcutPinner] goes through the pure `shortcutSpec` derivation, so there is no route from
+ * here to a shortcut of a different shape.
  *
  * One `String` comes in, exactly as feature 001's `contracts/selection-handoff.md` hands it
  * across. Label, icon, and version code are **re-resolved here** rather than carried, which is
  * obligation C3 of that contract and also what makes FR-015 reachable: the app can be
  * uninstalled while this screen is open.
  *
- * [onDone] is invoked for **every** exit — created, backed out, system back. The caller cannot
- * tell which and must not need to: the app shows no confirmation (FR-012), so "created" and
- * "cancelled" are the same event as far as navigation is concerned. A callback that reported the
- * outcome would invite exactly the message the spec forbids.
+ * The single exit split in feature 003. [onCreated] is the apply path and [onBack] is both
+ * cancel paths — the affordance and the system gesture — because FR-014 makes them lead to
+ * different places: back returns to the delay screen with the chosen delay intact, creating
+ * returns to the list. Feature 002's rule that the caller "cannot tell which and must not need
+ * to" is **narrowed, not reversed**, and its reason is untouched: neither callback says anything
+ * to the user, and this screen still cannot tell a honoured pin from a declined one (FR-012,
+ * C17, research.md R10). What differs is navigation. Nothing else.
+ *
+ * [delaySeconds] arrives already chosen and is never edited here — it is written to the store
+ * with the treatment on apply (C16). [initialTreatment] is the app's saved treatment, or
+ * `Original` for an app with none; the caller decides which, so this screen has no idea whether
+ * the app was configured before (C15, FR-013).
  *
  * No ViewModel (research.md R10). The screen holds one async load and one enum.
  */
 @Composable
 fun ShortcutConfigScreen(
     packageName: String,
-    onDone: () -> Unit,
+    delaySeconds: Int,
+    initialTreatment: IconTreatment,
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -84,9 +96,9 @@ fun ShortcutConfigScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // FR-021/C13: the system gesture and button behave exactly as the affordance does — the same
-    // `onDone`, no separate path that could grow a different meaning. Without this the gesture
+    // `onBack`, no separate path that could grow a different meaning. Without this the gesture
     // would leave the app entirely, which is the trap this story exists to close.
-    BackHandler { onDone() }
+    BackHandler { onBack() }
 
     // Its own instance rather than feature 001's: the ViewModel's cache is not reachable from
     // here without widening `AppListScreen`'s contract, and the tier that matters — the WebP
@@ -94,6 +106,7 @@ fun ShortcutConfigScreen(
     // loads exactly one icon, so the second in-memory LruCache holds one entry.
     val iconCache = remember(context) { AppIconCache(context) }
     val pinner = remember(context) { ShortcutPinner(context) }
+    val store = remember(context) { DelayConfigStore(context) }
 
     val targetState by produceState<TargetState>(TargetState.Resolving, packageName) {
         value = TargetState.Resolving
@@ -111,16 +124,19 @@ fun ShortcutConfigScreen(
             ?: IconState.Failed
     }
 
-    // Guards the window between the tap and `onDone()`, in which the create path is doing IO.
+    // Guards the window between the tap and `onCreated()`, in which the create path is doing IO.
     // A second tap would issue a second pin request — harmless, since the ID is derived and the
     // second call would simply update in place, but it would also put a second system dialog in
     // front of the user for one deliberate action.
     var creating by remember { mutableStateOf(false) }
 
-    // `Original` is `entries.first()`, so the initial selection and the display order cannot
-    // drift apart (FR-006). A Kotlin enum is `Serializable`, which is what the default saver
-    // needs to carry the choice through rotation and process death (FR-008, C7).
-    var treatment by rememberSaveable { mutableStateOf(IconTreatment.entries.first()) }
+    // C15/FR-013: the opening selection is the app's saved treatment, which the caller read
+    // before navigating here. `Original` still opens an app that has none — but because the
+    // caller passes `DelayConfig.DEFAULT`'s treatment, which is `entries.first()`, so the
+    // default and the display order still cannot drift apart (002 FR-006). A Kotlin enum is
+    // `Serializable`, which is what the default saver needs to carry the choice through
+    // rotation and process death (FR-008, C7).
+    var treatment by rememberSaveable { mutableStateOf(initialTreatment) }
 
     // C5/SC-004: a filter on the already-loaded `ImageBitmap`, never a bitmap baked per tap.
     // Switching treatment recomposes one node and copies no pixels. `Original` carries no
@@ -154,7 +170,7 @@ fun ShortcutConfigScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                IconButton(onClick = onDone) {
+                IconButton(onClick = onBack) {
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = stringResource(R.string.shortcut_config_back),
@@ -208,13 +224,15 @@ fun ShortcutConfigScreen(
                             context = context,
                             packageName = packageName,
                             icon = loaded,
+                            delaySeconds = delaySeconds,
                             treatment = treatment,
                             pinner = pinner,
+                            store = store,
                             onUnavailable = {
                                 creating = false
                                 snackbarHostState.showSnackbar(targetUnavailable)
                             },
-                            onDone = onDone,
+                            onCreated = onCreated,
                         )
                     }
                 },
@@ -234,7 +252,7 @@ fun ShortcutConfigScreen(
  *
  * Re-resolves before pinning, because the target can be uninstalled between the screen opening
  * and this tap (FR-015). On that path nothing is created, the user is told, and **the screen
- * stays open** — the one exit that is not [onDone].
+ * stays open** — the one outcome that is neither [onCreated] nor a back.
  *
  * The pin itself is gated on support being confirmed *at this moment* (FR-013): the user may
  * have changed launcher while the screen was open. When it is not, no shortcut is created and
@@ -245,6 +263,13 @@ fun ShortcutConfigScreen(
  * Nothing is shown on success (FR-012, C9). Confirmation is the launcher's, and the app cannot
  * tell a decline from a success, so it claims neither.
  *
+ * The configuration is written **before** the pin is requested (C16, research.md R10). The pin
+ * puts a system dialog in front of the user, and a write queued behind it would be a write
+ * waiting on a decision it does not depend on; worse, a crash or a kill in between would leave
+ * an icon on the home screen whose delay was never saved. In that order the failure mode is the
+ * harmless one: a saved configuration with no icon, which the delay screen simply shows again
+ * (spec, Accepted limitations).
+ *
  * [treatment] is the one showing in the preview. It and the preview's `ColorFilter` are derived
  * from the same [IconTreatment.matrix], which is what makes SC-003 — the icon that lands matches
  * the one previewed — structural rather than a thing to check by eye.
@@ -253,10 +278,12 @@ private suspend fun create(
     context: Context,
     packageName: String,
     icon: ImageBitmap,
+    delaySeconds: Int,
     treatment: IconTreatment,
     pinner: ShortcutPinner,
+    store: DelayConfigStore,
     onUnavailable: suspend () -> Unit,
-    onDone: () -> Unit,
+    onCreated: () -> Unit,
 ) {
     val fresh = resolveShortcutTarget(context, packageName)
     if (fresh == null) {
@@ -264,41 +291,12 @@ private suspend fun create(
         return
     }
 
+    // FR-015, C16: both values, as one record, before the pin request. `packageName` is the key
+    // and the only one — never `fresh.label`, which is display text (Constitution V).
+    store.save(packageName, DelayConfig(delaySeconds, treatment))
+
     pinner.pin(fresh, treatment, icon.asAndroidBitmap())
-    onDone()
-}
-
-/**
- * Resolves the display facts for [packageName], off the main thread (FR-024).
- *
- * The label comes from `LauncherApps` and the lowest-labelled activity wins, which is the same
- * rule `dedupeByPackage` applies in feature 001 — so the preview shows the same text the row the
- * user tapped did, rather than an `ApplicationInfo` label that can differ.
- */
-private suspend fun resolveShortcutTarget(
-    context: Context,
-    packageName: String,
-): ShortcutTarget? {
-    val packageManager = context.packageManager
-    val launcherApps = context.getSystemService(LauncherApps::class.java)
-
-    return resolveTarget(
-        packageName = packageName,
-        resolveLaunchIntent = { packageManager.getLaunchIntentForPackage(it) },
-        loadLabel = {
-            runCatching {
-                launcherApps.getActivityList(it, Process.myUserHandle())
-                    .minOfOrNull { activity -> activity.label.toString() }
-            }.getOrNull()
-        },
-        loadVersionCode = {
-            runCatching {
-                packageManager
-                    .getPackageInfo(it, PackageManager.PackageInfoFlags.of(0))
-                    .longVersionCode
-            }.getOrDefault(UNKNOWN_VERSION)
-        },
-    )
+    onCreated()
 }
 
 /**
@@ -423,9 +421,6 @@ private sealed interface IconState {
     data class Loaded(val bitmap: ImageBitmap) : IconState
     data object Failed : IconState
 }
-
-/** A package that vanished mid-resolution still gets a usable, stable cache key. */
-private const val UNKNOWN_VERSION = 0L
 
 private val PREVIEW_ICON_SIZE = 96.dp
 private val PREVIEW_LABEL_WIDTH = 160.dp

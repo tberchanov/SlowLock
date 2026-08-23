@@ -1,6 +1,65 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.0.0 → 1.1.0 (amendment, 2026-08-23)
+Rationale: MINOR. A principle's binding rule gains a bounded carve-out and a workflow
+section's obligation is relaxed and replaced. Nothing that complied with 1.0.0 becomes
+non-compliant, and no principle is removed or redefined against its purpose, so this is
+not MAJOR; the changes alter obligations rather than wording, so it is not PATCH.
+Requested by the maintainer during /speckit-analyze of feature 003-launch-delay.
+
+Modified principles:
+  - IV. Platform-Idiomatic Android (title unchanged) — "no wake locks in v1" narrowed to
+    "no `PowerManager` wake locks", with an explicit, bounded allowance for
+    FLAG_KEEP_SCREEN_ON: window-scoped, only on a screen the user is looking at, only
+    where the feature does not work without it, released with the window. "Battery cost
+    at rest MUST be zero" is unchanged, and PowerManager wake locks remain forbidden.
+
+Modified sections:
+  - Additional Constraints & Technology Standards → Scope boundary: "countdown
+    `DelayActivity`" → "delay screen", plus a sentence putting the screen's presentation
+    (countdown, progress, or deliberately static) in the feature's hands, not this file's.
+  - Development Workflow & Quality Gates → Testing expectations: the mandated instrumented
+    test for the delay hand-off is REMOVED. Automated coverage now means JVM unit tests
+    only. A new binding rule forbids instrumented suites (src/androidTest,
+    connectedAndroidTest, Espresso, UI Automator) outright, and forbids an agent driving
+    the connected device to pre-verify a manual case. A third unit-test obligation is
+    added: every frozen persisted value MUST be asserted against a literal.
+  - Development Workflow & Quality Gates → Manual verification: every feature MUST now
+    ship a written, numbered, requirement-traceable manual test plan. The existing
+    non-Pixel OEM and Xiaomi Dual Apps release gate is unchanged.
+
+Added sections: none. Removed sections: none.
+
+Effect on existing specs (required by Governance):
+  - 001-installed-apps-list — unaffected.
+  - 002-shortcut-pinning — its recorded instrumented-test waiver (plan.md, "Testing-
+     expectations check") is now MOOT: the clause it waived no longer exists. The waiver's
+     closing promise that the requirement "returns in full" with the delay feature is
+     superseded and MUST NOT be honoured. No other change; the feature is complete and
+     its frozen contract is untouched.
+  - 003-launch-delay — three consequences, all pending: FLAG_KEEP_SCREEN_ON stops being a
+     deviation (plan.md Complexity Tracking row 2 to be removed, Principle IV row to be
+     re-marked PASS); the instrumented suite, its stub activity, and the
+     connectedDebugAndroidTest gate to be dropped from plan.md, tasks.md, research.md R12,
+     contracts/wait-screen.md, quickstart.md and data-model.md, with the coverage they
+     carried moved into manual-test-plan.md; the in-plan "countdown" ruling is superseded
+     by this amendment and to be replaced with a pointer here. Its spec's FR-035 must also
+     be amended to match the new Principle IV wording.
+
+Templates checked for consistency:
+  ✅ .specify/templates/plan-template.md — derives gates from this file at plan time; the
+     new rules need no template edit.
+  ✅ .specify/templates/spec-template.md — no constitution references.
+  ✅ .specify/templates/tasks-template.md — no constitution references. Note its sample
+     tasks mention contract/integration tests generically; no device-driving implication.
+  ✅ .specify/templates/checklist-template.md — no constitution references.
+  ✅ CLAUDE.md — points at the active plan; no principle references to update.
+
+Follow-up TODOs: the three deferred items from 1.0.0 (below) are unchanged and still open.
+
+---
+
 Version change: [TEMPLATE] → 1.0.0 (initial ratification)
 Rationale: First concrete constitution. No prior version existed; the file was an
 unfilled template. MAJOR bump to 1.0.0 establishes the baseline.
@@ -107,8 +166,14 @@ Work with the platform, never around it. Binding rules:
 - Package enumeration, icon rasterization, and disk I/O MUST run off the main thread.
 - Activity launches MUST originate from a user-initiated foreground context. Background
   activity starts MUST NOT be attempted.
-- No persistent foreground services, no polling loops, no wake locks in v1. Battery cost
-  at rest MUST be zero.
+- No persistent foreground services, no polling loops, and no `PowerManager` wake locks in
+  v1. Battery cost at rest MUST be zero.
+- **Keeping the display awake is permitted only as a window flag** (`FLAG_KEEP_SCREEN_ON`),
+  only on a screen the user is actively looking at, and only where the feature does not
+  work without it. It MUST be released with that window, MUST NOT outlive it, and MUST NOT
+  be reached for as a convenience. A `PowerManager` wake lock is never an acceptable
+  substitute: it needs a permission (Principle III), it is deprecated, and it can survive
+  the screen that took it.
 - OEM battery-management behaviour MUST NOT be fought with hacks or whitelisting
   prompts.
 
@@ -143,9 +208,10 @@ network access, analytics, or a third-party SDK is a constitutional amendment, n
 plan-level decision.
 
 **Scope boundary.** v1 covers exactly: app enumeration and picking, per-app schedule and
-delay configuration, pinned shortcut creation with mirrored icon and label, and a
-countdown `DelayActivity` that launches the target. Anything beyond this requires an
-approved spec.
+delay configuration, pinned shortcut creation with mirrored icon and label, and a delay
+screen that launches the target. Anything beyond this requires an approved spec. How that
+screen presents — countdown, progress, or deliberately static — is a product decision for
+the feature that builds it, not a constitutional one.
 
 **Non-goals.** Parental controls, usage enforcement, usage statistics, and cross-device
 sync are out of scope and MUST be rejected at spec review.
@@ -165,19 +231,34 @@ unjustified violation blocks implementation.
 **Build gate.** `./gradlew assembleDebug` and `./gradlew test` MUST pass before a feature
 is considered complete. Work MUST NOT be reported as done on an unverified build.
 
-**Testing expectations.** Test-first is RECOMMENDED but not mandated. Regardless of
-order, the following MUST have automated coverage before a feature is complete:
+**Testing expectations.** Test-first is RECOMMENDED but not mandated. Automated coverage
+means **JVM unit tests only** (`./gradlew test`). Regardless of order, the following MUST
+have automated coverage before a feature is complete:
 
 - Schedule/time-window evaluation logic — unit tests, including boundary times, weekday
   handling, and the outside-window immediate-launch path.
 - Target resolution and the null `getLaunchIntentForPackage()` path — unit tests.
-- `DelayActivity` countdown and hand-off to the target app — instrumented test.
+- Any frozen persisted value — a unit test asserting it against a literal, so a rename
+  fails the build instead of a user's device.
 
 Pure-Compose presentation without branching logic MAY ship without tests.
 
-**Manual verification.** Before any release, shortcut pinning MUST be verified on at
-least one non-Pixel OEM device, and behaviour under Xiaomi Dual Apps MUST be recorded as
-tested or explicitly untested.
+**No automated test may drive a device.** Instrumented suites (`src/androidTest`,
+`connectedAndroidTest`, Espresso, UI Automator) MUST NOT be added to this project. Where
+a behaviour can only be observed on a running app — a delay screen's timing, the hand-off
+to a target app, what a launcher does with a pin request — it MUST be verified **manually
+by the maintainer** against the feature's written manual test plan.
+
+**Rationale:** what these behaviours depend on is real launchers, real OEM builds, and real
+timing on a real phone; a scripted approximation asserts the harness rather than the
+product, and it spends the maintainer's device session without their say-so. An agent MUST
+NOT drive the connected device to pre-verify a manual case. It states which cases need
+running, and waits.
+
+**Manual verification.** Every feature MUST ship with a written manual test plan whose
+cases are numbered and traceable to requirements. Before any release, shortcut pinning
+MUST be verified on at least one non-Pixel OEM device, and behaviour under Xiaomi Dual
+Apps MUST be recorded as tested or explicitly untested.
 
 ## Governance
 
@@ -204,4 +285,4 @@ never silently accepted.
 guidance and points to the active plan. It is subordinate to this file and MUST NOT
 restate principles — only reference them.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-15
+**Version**: 1.1.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-23

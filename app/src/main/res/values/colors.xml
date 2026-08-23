@@ -7,4 +7,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!--
+        The whole visual design of the wait screen (obligation W12, research.md R7).
+
+        Both are painted twice: by Theme.SlowLock.Wait's windowBackground, so the system's
+        starting window is already the final colour on the tap's own frame, and by WaitScreen
+        itself. Matching them is what removes the flash FR-022 forbids.
+
+        Deliberately flat, unbranded and unsaturated. This is the one screen in the app designed
+        not to be looked at; anything with character here is a defect. A values-night variant of
+        both is mandatory - see values-night/colors.xml.
+    -->
+    <color name="wait_background">#FFFAFAFA</color>
+    <color name="wait_text">#FF6E6E6E</color>
 </resources>

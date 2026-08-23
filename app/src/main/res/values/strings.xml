@@ -7,6 +7,35 @@
     <string name="app_list_unavailable">That app is no longer available.</string>
     <string name="app_list_icon_description">%1$s icon</string>
 
+    <!--
+        The entire text of the wait screen (FR-025, obligations W8 and W11).
+
+        It must not name the target app, must not mention a duration, and must not suggest that
+        anything is loading. "Please wait" is deliberately the dullest phrasing available: the
+        screen's job is to be uninteresting for as long as the delay lasts, and a friendlier or
+        more explanatory line is a line worth reading twice.
+    -->
+    <string name="wait_message">Please wait</string>
+
+    <string name="delay_config_title">Wait before opening</string>
+    <string name="delay_config_back">Back</string>
+    <string name="delay_config_next">Next</string>
+
+    <!--
+        The readout beside the slider (FR-007, obligation D4).
+
+        A <plurals> rather than "%1$d seconds", and load-bearing rather than defensive: the
+        slider's minimum is one second, so "1 second" is a value the user can actually select and
+        "1 seconds" is a bug one drag away. It was written as a plural while the minimum was
+        still five, on the argument that the range was provisional — which is exactly what it
+        then turned out to be. A language whose plural rules differ from English's has forms this
+        app never chose; that part remains a translator's to see, not a JVM test's.
+    -->
+    <plurals name="delay_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+
     <string name="shortcut_config_title">New shortcut</string>
     <string name="shortcut_config_back">Back</string>
     <string name="shortcut_config_create">Create shortcut</string>

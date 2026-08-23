@@ -57,6 +57,22 @@ design:
 |---|---|
 | **What `ShortcutLaunchActivity` does** | Today: resolve and start immediately. Tomorrow: countdown, schedule check, or launch straight through when outside a delay window. This is how FR-011 is honoured — existing shortcuts gain the delay with nothing asked of the user |
 | **The activity's theme and manifest attributes** | Not persisted. The transparent, `excludeFromRecents` declaration this draft uses becomes a visible countdown theme when the delay ships |
+
+> **What actually shipped (feature 003, verified 2026-08-24).** This section's *predictions* were
+> half right and are corrected here; **no frozen value below or above was touched.**
+>
+> - The activity now waits, then resolves and starts — but there is **no countdown** and **no
+>   schedule check**. The wait screen is deliberately motionless (`003/contracts/wait-screen.md`
+>   W8–W11), and schedules remain unbuilt. "A visible countdown theme" became
+>   `Theme.SlowLock.Wait`, a plain DayNight theme.
+> - The manifest attributes did change, all within this section's permission:
+>   `theme` → `@style/Theme.SlowLock.Wait`, `launchMode="singleTop"` added, `noHistory="true"`
+>   **removed**. `exported`, `excludeFromRecents` and the empty `taskAffinity` are unchanged.
+> - Obligations L4 and L5 below are superseded by `003/contracts/wait-screen.md` (W19, W20); L1,
+>   L2, L3, L6 and L7 all still hold verbatim.
+>
+> **The return on the freeze was collected in full**: every shortcut pinned under feature 002
+> gained the delay with nothing re-pinned and nothing asked of the user.
 | **The icon and label on any given shortcut** | Replaceable in place via `updateShortcuts` (see below) |
 | **Everything about the configuration screen** | Ordinary draft UI, expected to be replaced by the delay-configuration screen |
 

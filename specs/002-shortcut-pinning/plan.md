@@ -114,6 +114,32 @@ recorded as an **explicit waiver rather than a silent non-application**.
 - **Returns in full** when the delay feature adds the countdown: that feature MUST carry the
   instrumented test for both the countdown and the hand-off, and MUST NOT inherit this waiver.
 
+> **Amended by feature 003 (2026-08-24): this waiver is MOOT, not honoured — and the promise in
+> the last bullet is superseded. Do not read it as an outstanding debt.**
+>
+> **Constitution v1.1.0 removed the clause this waiver was written against.** Instrumented tests
+> are no longer merely unrequired; `src/androidTest`, `connectedAndroidTest`, Espresso and UI
+> Automator are now **forbidden outright**, as is an agent driving a connected device. So feature
+> 003 did not "carry the instrumented test for both the countdown and the hand-off" — it could
+> not have, and a future reader must not record that as a missed obligation.
+>
+> A waiver excuses a requirement that exists. There is no requirement here to excuse: its subject
+> was removed from the governing document. The distinction matters because the two readings leave
+> very different residue — an honoured waiver would have discharged a debt, whereas a moot one
+> means the debt never came due and nothing is owed by any later feature either.
+>
+> The `espresso-intents` cost that this waiver's third bullet weighed is now moot for the same
+> reason, and the fourth bullet's premise turned out to be wrong twice over: the delay feature did
+> not replace this screen's launch behaviour wholesale (it wrapped it — see
+> `contracts/shortcut-config-screen.md`), and there was never a countdown to test. Feature 003's
+> wait screen is deliberately without one.
+>
+> **What covers the hand-off now**: `WaitTimingTest` over the pure wait arithmetic,
+> `ShortcutContractTest`'s unchanged rename guard, and the manual cases in
+> `specs/003-launch-delay/manual-test-plan.md` — M5 for the hand-off and the six abandonment
+> routes, M6 for durability. That plan is run by the maintainer, which is the constitution's
+> intent as amended.
+
 Schedule/time-window logic does not exist yet, so that clause is not engaged.
 
 **Gate result**: PASS, both before research and after design. No deviations — Complexity Tracking

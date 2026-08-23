@@ -33,24 +33,39 @@
         </activity>
 
         <!--
-            The target of every pinned shortcut. Its android:name is FROZEN - it is written
-            into each shortcut's persisted intent (contracts/pinned-shortcut.md), and
+            The target of every pinned shortcut, and now the wait screen
+            (003-launch-delay/contracts/wait-screen.md). Its android:name is FROZEN - it is
+            written into each shortcut's persisted intent (contracts/pinned-shortcut.md), and
             ShortcutContractTest fails the build if the class ever moves.
 
             exported="false" is correct and deliberate: the launcher does not start this
             intent itself, it calls LauncherApps.startShortcut() and the system starts the
-            intent under SlowLock's own identity, so no export is needed (research.md R5).
+            intent under SlowLock's own identity, so no export is needed (002 research.md R5).
 
-            The remaining four attributes are FR-019 together with the translucent theme -
-            no visible SlowLock screen, no recents entry (research.md R6).
+            excludeFromRecents and the empty taskAffinity are unchanged from feature 002 and
+            still carry FR-031: no SlowLock entry in recents, and the target opens in its own
+            task so backing out of it does not unwind into the wait screen.
+
+            Two changes this feature makes, both deliberate:
+
+            - theme: Theme.SlowLock.Invisible -> Theme.SlowLock.Wait. The activity is now MEANT
+              to be seen, and its windowBackground is the colour WaitScreen paints, so the tap
+              lands on the final background with no flash (003 research.md R7).
+            - noHistory="true" is REMOVED. It finishes the activity on every onStop - INCLUDING
+              a rotation - which would restart the wait each time the device turned. The
+              explicit onStop rule (obligation W15, US4) has the isChangingConfigurations
+              exception that noHistory cannot express (003 research.md R5).
+
+            launchMode="singleTop" is new: a second tap of the same shortcut must arrive at
+            onNewIntent and be ignored, not start a second wait (obligation W22, FR-027).
         -->
         <activity
             android:name=".shortcut.ShortcutLaunchActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:noHistory="true"
+            android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@style/Theme.SlowLock.Invisible" />
+            android:theme="@style/Theme.SlowLock.Wait" />
     </application>
 
 </manifest>

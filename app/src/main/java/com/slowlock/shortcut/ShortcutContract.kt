@@ -4,9 +4,9 @@ package com.slowlock.shortcut
  * The permanent shape of a pinned shortcut. **Every constant here is frozen.**
  *
  * The normative document is `contracts/pinned-shortcut.md`; this is its in-code form. Unlike
- * the rest of this feature — which is a draft, and expected to be replaced by the
- * delay-configuration screen — nothing below may change once a shortcut has been pinned on a
- * real device.
+ * the rest of this feature — a draft, expected to be replaced by the delay-configuration screen,
+ * though in the event feature 003 wrapped it rather than replacing it — nothing below may change
+ * once a shortcut has been pinned on a real device.
  *
  * The reason is that a pinned shortcut outlives the app's opinion of it. SlowLock cannot
  * enumerate the shortcuts a launcher holds, cannot remove them, and must never ask the user to
@@ -14,10 +14,19 @@ package com.slowlock.shortcut
  * pin time, so changing one does not migrate anything — it orphans every shortcut already on
  * every home screen, and the failure surfaces at the moment the user taps the icon.
  *
- * What is *not* frozen is the behaviour behind these values. [ShortcutLaunchActivity] today
- * resolves and starts the target immediately; when the delay feature ships it gains a countdown
- * and a schedule check, and every already-pinned shortcut picks that up with nothing asked of
- * the user. Freezing the shape is what buys that freedom.
+ * What is *not* frozen is the behaviour behind these values, and **feature 003 collected on
+ * that**: [ShortcutLaunchActivity] no longer starts the target immediately — it shows a wait
+ * screen for the app's configured delay first. Every shortcut pinned by feature 002 picked the
+ * wait up with nothing re-pinned and nothing asked of the user, because the delay is read off
+ * disk at tap time rather than carried in the intent. Freezing the shape is what bought that.
+ *
+ * Two corrections to what this paragraph used to predict, since a wrong prediction left standing
+ * in a frozen file is how the file stops being trusted: there is **no countdown** — the wait
+ * screen is deliberately motionless, and that is a design obligation rather than an omission
+ * (`specs/003-launch-delay/contracts/wait-screen.md` W8–W11) — and there is **no schedule check**,
+ * which remains unbuilt.
+ *
+ * None of that touched a single value below, which is the point.
  *
  * This file is deliberately framework-free — no `android.*` imports — which is why [ACTION] is
  * the string literal rather than `Intent.ACTION_VIEW`. It keeps the frozen values assertable on
