@@ -1,6 +1,7 @@
 package com.slowlock.delay
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
@@ -72,5 +73,63 @@ class DelayRangeTest {
     @Test
     fun `the default delay is a reachable slider stop`() {
         assertEquals(DelayConfig.DEFAULT_SECONDS, DelayRange.snap(DelayConfig.DEFAULT_SECONDS))
+    }
+
+    // ---- Presets (feature 004, FR-017 to FR-019) --------------------------------------------
+
+    @Test
+    fun `the presets are the three the design names`() {
+        assertEquals(listOf(5, 10, 30), DelayRange.PRESETS)
+    }
+
+    /**
+     * FR-019: a preset is a convenience over the range, never an alternative to it. A preset the
+     * slider could not also reach would be a second, competing source of truth for what a legal
+     * delay is.
+     */
+    @Test
+    fun `every preset is inside the range`() {
+        DelayRange.PRESETS.forEach { preset ->
+            assertTrue(
+                "preset $preset is outside ${DelayRange.MIN_SECONDS}..${DelayRange.MAX_SECONDS}",
+                preset in DelayRange.MIN_SECONDS..DelayRange.MAX_SECONDS,
+            )
+        }
+    }
+
+    /**
+     * The bug this catches: tapping a preset, and watching the slider move somewhere else.
+     *
+     * The screen sets the delay to the preset's value and the slider renders from that same
+     * value, so a preset `snap` would shift is a preset the user cannot actually select.
+     */
+    @Test
+    fun `every preset is snap-stable`() {
+        DelayRange.PRESETS.forEach { preset ->
+            assertEquals("preset $preset is not a reachable stop", preset, DelayRange.snap(preset))
+        }
+    }
+
+    @Test
+    fun `presetFor finds a preset and only a preset`() {
+        DelayRange.PRESETS.forEach { preset ->
+            assertEquals(preset, DelayRange.presetFor(preset))
+        }
+        listOf(1, 4, 6, 9, 11, 17, 29).forEach { seconds ->
+            assertNull("$seconds is not a preset", DelayRange.presetFor(seconds))
+        }
+    }
+
+    /**
+     * US2 scenario 3, expressed as arithmetic: dragging to a non-preset highlights nothing.
+     *
+     * Selection is derived rather than stored, so "no preset selected" is a normal state the
+     * screen falls into by construction — there is no flag anywhere that could fail to clear.
+     */
+    @Test
+    fun `most values in the range are not presets`() {
+        val presets = (DelayRange.MIN_SECONDS..DelayRange.MAX_SECONDS)
+            .count { DelayRange.presetFor(it) != null }
+        assertEquals(DelayRange.PRESETS.size, presets)
     }
 }

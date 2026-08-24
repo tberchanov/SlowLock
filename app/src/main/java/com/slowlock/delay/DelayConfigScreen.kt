@@ -1,23 +1,27 @@
 package com.slowlock.delay
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,38 +32,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.slowlock.R
 import com.slowlock.apps.AppIconCache
 import com.slowlock.shortcut.ShortcutTarget
 import com.slowlock.shortcut.resolveShortcutTarget
+import com.slowlock.ui.components.PrimaryAction
+import com.slowlock.ui.components.ScreenHeader
+import com.slowlock.ui.components.SelectableTile
+import com.slowlock.ui.theme.Pill
+import com.slowlock.ui.theme.SlowLockType
 import kotlin.math.roundToInt
 
 /**
- * How long the pinned icon should wait before the target opens: a slider, a readout, and a
- * "next" that carries the value on to feature 002's shortcut screen.
+ * How long to wait before the target opens.
  *
- * **The screen does not own the chosen value** (obligation D5). It arrives as [seconds] and
- * leaves through [onSecondsChange]; there is deliberately no `rememberSaveable` copy of it here.
- * That is what makes FR-014 work — the value survives the trip to the shortcut screen and back
- * because it never lived on this screen to be lost. `SlowLockRoot` holds it in the stage
- * (research.md R9), which is also what carries it through rotation and process death (FR-008).
+ * Feature 004 re-weighted this screen around the number it exists to set: the delay is now the
+ * largest thing on it, in the mono face every number in the app uses, above a slider and three
+ * one-tap presets.
  *
- * One `String` comes in, exactly as feature 001's `contracts/selection-handoff.md` hands it
- * across. Label and icon are **re-resolved here** rather than carried (D1, D2) — the app can be
- * uninstalled while this screen is open, and a carried label would go on describing an app that
- * is gone.
+ * **The screen still owns no state.** [onSecondsChange] remains the only way a value leaves it,
+ * and it still never touches `DelayConfigStore` — the root loads the saved value before it
+ * navigates and hands it in (003 D9, `contracts/screen-inventory.md` S2). The presets did not
+ * change that: tapping one calls [onSecondsChange] like a slider drag does.
  *
- * Nothing here reads or writes [DelayConfigStore] (D9): the caller has already read it, before
- * the transition, so the first composition is correct rather than corrected (D13, research.md
- * R3). Nothing here can launch the target either (D10) — no screen in SlowLock's UI can.
+ * **Which preset appears selected is derived, never stored.** There is no "selected preset"
+ * variable anywhere; the row asks `DelayRange.presetFor(seconds)` at composition time. That is
+ * what makes "dragged to 17 seconds, so nothing is highlighted" correct by construction rather
+ * than by remembering to clear a flag (FR-018).
  *
- * No ViewModel (research.md R10, D11). One async resolution and one hoisted `Int`.
+ * **The numeral is the element that yields.** The header, slider, preset row and action are fixed
+ * height; the centre block takes what is left and the readout auto-sizes into it. So at the
+ * largest font scale on the smallest screen, the button is still reachable and the screen never
+ * needs to scroll (FR-014a, contract C11, research R10).
  */
 @Composable
 fun DelayConfigScreen(
@@ -71,17 +81,9 @@ fun DelayConfigScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-
-    // D7/FR-010: the system gesture and the affordance are the same exit, through the same
-    // callback, so neither can grow a meaning the other lacks. Neither saves anything — the
-    // store is not reachable from this screen at all (FR-020, D9).
     BackHandler { onBack() }
 
-    // Its own instance, the same trade feature 002's screen makes: the ViewModel's cache is not
-    // reachable from here without widening `AppListScreen`'s contract, and the tier that matters
-    // — the WebP files in cacheDir — is shared anyway, keyed identically (Constitution V).
     val iconCache = remember(context) { AppIconCache(context) }
-
     val targetState by produceState<TargetState>(TargetState.Resolving, packageName) {
         value = TargetState.Resolving
         value = resolveShortcutTarget(context, packageName)
@@ -89,150 +91,108 @@ fun DelayConfigScreen(
             ?: TargetState.Missing
     }
     val target = (targetState as? TargetState.Resolved)?.target
-
     val icon by produceState<ImageBitmap?>(null, target) {
         value = null
         val resolved = target ?: return@produceState
         value = iconCache.icon(resolved.packageName, resolved.versionCode)
     }
 
-    Scaffold(modifier = modifier.fillMaxSize()) { contentPadding ->
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = SCREEN_PADDING),
+    ) {
+        ScreenHeader(title = stringResource(R.string.delay_config_title), onBack = onBack)
+
+        // The flexible middle. Everything below it is fixed height, which is the whole mechanism
+        // behind FR-014a: there is no arrangement in which the action can be pushed off screen.
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .padding(horizontal = 24.dp),
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_arrow_back),
-                        contentDescription = stringResource(R.string.delay_config_back),
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.delay_config_title),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+            when {
+                targetState is TargetState.Missing ->
+                    Message(stringResource(R.string.app_list_unavailable))
+                // Resolving: nothing, deliberately. A spinner for a package-manager lookup that
+                // takes milliseconds is a flash, not feedback (003).
+                target == null -> Unit
+                else -> AppPill(label = target.label, icon = icon)
             }
+            Readout(seconds = seconds, modifier = Modifier.weight(1f, fill = false))
+        }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                when {
-                    // Uninstalled while the screen was open. Saying so here is not a
-                    // confirmation of anything (FR-012) — it is the answer to "which app is
-                    // this?", which is the one question this half of the screen exists to
-                    // answer. The slider keeps working; the shortcut screen re-resolves and
-                    // refuses to create anything for an app that is gone (002 FR-015).
-                    targetState is TargetState.Missing ->
-                        Message(stringResource(R.string.app_list_unavailable))
-
-                    // Resolving: no spinner for a package-manager lookup, exactly as the
-                    // shortcut screen does nothing here either.
-                    target == null -> Unit
-
-                    else -> Target(label = target.label, icon = icon)
-                }
-            }
-
-            DelaySlider(
-                seconds = seconds,
-                onSecondsChange = onSecondsChange,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // D8/FR-009: nothing is written here. Applying happens on the shortcut screen, and
-            // this action only moves the chosen value forward. It stays enabled while the
-            // target is still resolving — the delay is choosable without knowing the app's
-            // name, and the next screen resolves for itself.
-            Button(
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(26.dp),
+        ) {
+            DelaySlider(seconds = seconds, onSecondsChange = onSecondsChange)
+            PresetRow(seconds = seconds, onSecondsChange = onSecondsChange)
+            PrimaryAction(
+                label = stringResource(R.string.delay_config_next),
                 onClick = onNext,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp),
-            ) {
-                Text(stringResource(R.string.delay_config_next))
-            }
+                modifier = Modifier.padding(bottom = 20.dp),
+            )
         }
     }
 }
 
 /**
- * The slider and its readout (D3, D4, D6).
+ * The delay, as large as the space allows.
  *
- * `steps` counts the stops *between* the endpoints, which is why [DelayRange.SLIDER_STEPS] is
- * two less than the number of reachable values — the off-by-one `DelayRangeTest` exists to
- * catch (research.md R11).
+ * 104sp is a **ceiling, not a size**. `TextAutoSize.StepBased` fits the numeral to whatever the
+ * centre block was left after the fixed-height controls took theirs, so a large system font scale
+ * makes everything else bigger and this smaller — which is the trade FR-014a chose, because the
+ * alternative was a screen whose primary action falls off the bottom.
  *
- * The `Float` the slider reports is rounded and then put through [DelayRange.snap] before it
- * leaves, so the readout, the value the caller holds, and the handle's position cannot disagree
- * (D6). Snapping rather than trusting the discrete stops is deliberate: the stops constrain what
- * the user can drag to, not what floating-point arithmetic hands back — and at a step of one
- * second that rounding is the *only* thing standing between the slider and a readout of
- * "17 seconds" for a handle sitting at 16.999.
+ * The floor is 32sp: below that it stops being the focal point and the design has failed anyway.
  */
 @Composable
-private fun DelaySlider(
-    seconds: Int,
-    onSecondsChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun Readout(seconds: Int, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        // FR-007: a slider without a readout lets the user choose a value they cannot name.
-        // Plurals rather than concatenation (D4) — see the resource's own comment.
-        Text(
-            text = pluralStringResource(R.plurals.delay_seconds, seconds, seconds),
-            style = MaterialTheme.typography.headlineSmall,
+        BasicText(
+            text = seconds.toString(),
+            style = SlowLockType.Readout.copy(color = MaterialTheme.colorScheme.onBackground),
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = 32.sp,
+                maxFontSize = SlowLockType.Readout.fontSize,
+            ),
+            maxLines = 1,
         )
-        Slider(
-            value = seconds.toFloat(),
-            onValueChange = { onSecondsChange(DelayRange.snap(it.roundToInt())) },
-            valueRange = DelayRange.MIN_SECONDS.toFloat()..DelayRange.MAX_SECONDS.toFloat(),
-            steps = DelayRange.SLIDER_STEPS,
-            modifier = Modifier.fillMaxWidth(),
+        Text(
+            text = stringResource(R.string.delay_config_seconds_caption),
+            style = SlowLockType.Caption,
+            color = MaterialTheme.colorScheme.outline,
         )
     }
 }
 
-/**
- * Which app is being configured (D2): its own icon above its own label.
- *
- * The same shape feature 002's preview uses, for the same reason — the user should recognise the
- * app here as the one they tapped. It is *not* a preview of the shortcut, though: no treatment
- * is chosen yet on this screen, so the icon is shown untreated and nothing here suggests what
- * will land on the home screen.
- */
+/** The target app, named once, above the number. */
 @Composable
-private fun Target(
-    label: String,
-    icon: ImageBitmap?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+private fun AppPill(label: String, icon: ImageBitmap?, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(Pill)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), Pill)
+            .padding(start = 8.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(modifier = Modifier.size(ICON_SIZE)) {
+        Box(modifier = Modifier.size(PILL_ICON)) {
             if (icon == null) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 )
             } else {
@@ -245,12 +205,147 @@ private fun Target(
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
+            style = SlowLockType.PillLabel,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = LABEL_WIDTH),
         )
+    }
+}
+
+/**
+ * Material 3's [Slider], restyled through its slot API.
+ *
+ * Deliberately **not** a hand-built control: the drag handling, the keyboard support, the
+ * accessibility semantics and the step snapping all already work, and none of them is what the
+ * design changes. Only the track and the thumb are overridden (FR-016, research R8).
+ *
+ * The slot API is still `@ExperimentalMaterial3Api`, so this opts in. The risk is contained: an
+ * API change here breaks the two private composables below at compile time, and the fallback is
+ * `SliderDefaults.Track` with `SliderColors`, which reaches the track colours but not the
+ * ring-style thumb. That is a smaller loss than re-implementing drag and accessibility would be.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DelaySlider(
+    seconds: Int,
+    onSecondsChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Slider(
+            value = seconds.toFloat(),
+            onValueChange = { onSecondsChange(DelayRange.snap(it.roundToInt())) },
+            valueRange = DelayRange.MIN_SECONDS.toFloat()..DelayRange.MAX_SECONDS.toFloat(),
+            steps = DelayRange.SLIDER_STEPS,
+            track = { state -> Track(state) },
+            thumb = { Thumb() },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.delay_config_range_min),
+                style = SlowLockType.Tick,
+                color = MaterialTheme.colorScheme.outline,
+            )
+            Text(
+                text = stringResource(R.string.delay_config_range_max),
+                style = SlowLockType.Tick,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Track(state: SliderState, modifier: Modifier = Modifier) {
+    val fraction = with(state) {
+        val span = valueRange.endInclusive - valueRange.start
+        if (span == 0f) 0f else ((value - valueRange.start) / span).coerceIn(0f, 1f)
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(TRACK_HEIGHT)
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fraction)
+                .height(TRACK_HEIGHT)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(MaterialTheme.colorScheme.primary),
+        )
+    }
+}
+
+@Composable
+private fun Thumb(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(THUMB_SIZE)
+            .clip(Pill)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(BorderStroke(THUMB_RING, MaterialTheme.colorScheme.primary), Pill),
+    )
+}
+
+/**
+ * Three one-tap delays.
+ *
+ * A `selectableGroup` of [SelectableTile]s, so a screen reader announces this as a single-choice
+ * set and reads the selection change rather than leaving it to colour (FR-043, contract U4).
+ *
+ * **"Nothing selected" is a legitimate state here**, unlike the icon-treatment row: any delay that
+ * is not 5, 10 or 30 leaves all three unhighlighted, and that is normal rather than an error.
+ * `Role.RadioButton` expresses both cases without the tile knowing which caller it has.
+ *
+ * These tiles ship at 44dp, below the 48dp accessibility floor — the deliberate trade recorded in
+ * FR-045 and scoped by contract C10 to this row and the treatment tiles alone.
+ */
+@Composable
+private fun PresetRow(
+    seconds: Int,
+    onSecondsChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selected = DelayRange.presetFor(seconds)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        DelayRange.PRESETS.forEach { preset ->
+            val isSelected = preset == selected
+            SelectableTile(
+                selected = isSelected,
+                onClick = { onSecondsChange(preset) },
+                contentDescription = stringResource(
+                    R.string.delay_config_preset_description,
+                    preset,
+                ),
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(PRESET_HEIGHT),
+            ) {
+                Text(
+                    text = stringResource(R.string.delay_config_preset, preset),
+                    style = SlowLockType.Preset.copy(
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    ),
+                )
+            }
+        }
     }
 }
 
@@ -258,19 +353,22 @@ private fun Target(
 private fun Message(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
+        style = SlowLockType.Body,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )
 }
 
-/** Whether the target's display facts are known yet, and whether it still exists. */
 private sealed interface TargetState {
     data object Resolving : TargetState
     data class Resolved(val target: ShortcutTarget) : TargetState
     data object Missing : TargetState
 }
 
-private val ICON_SIZE = 96.dp
-private val LABEL_WIDTH = 160.dp
+private val SCREEN_PADDING = 20.dp
+private val PILL_ICON = 32.dp
+private val TRACK_HEIGHT = 6.dp
+private val THUMB_SIZE = 26.dp
+private val THUMB_RING = 3.dp
+private val PRESET_HEIGHT = 44.dp

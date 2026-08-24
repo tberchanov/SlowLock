@@ -2,16 +2,24 @@
 <resources>
 
     <!--
-        The dark counterparts of the wait screen's two colours (obligation W12).
+        The dark counterparts of the wait screen's three values (FR-031, research R7).
 
-        **Not optional.** Without this file the wait screen is a full-brightness white field at
-        night - on the one screen in the app designed not to be noticed, and the one screen a
-        user is most likely to meet in a dark room, while every other screen follows the system
-        setting. It is also the difference between a matched starting window and a white flash
-        in dark mode (manual case M4.9).
+        **Not optional.** Without this file the wait screen is a full-brightness field at night -
+        on the one screen in the app designed not to be noticed, and the one screen a user is most
+        likely to meet in a dark room. It is also the difference between a matched starting window
+        and a white flash in dark mode (manual case M5.2).
 
-        Muted rather than pure black-on-white in both modes: legible, and nothing more.
+        This is the ONLY surface in the app that follows the device's light/dark setting in
+        Phase 1. The four in-app screens are pinned to light until Phase 3 builds a reviewed dark
+        palette (FR-008). That asymmetry is deliberate: a bright app in dark mode is a nuisance,
+        a white flash at 2am is a defect.
+
+        #14120E is the warm near-black the light ground implies, not a neutral grey, so the two
+        modes read as the same product. Measured contrast: message on background 5.09:1, rule on
+        background 5.96:1 - both clear of the 4.5:1 floor. The accent is unchanged in both modes;
+        it reads on either ground.
     -->
-    <color name="wait_background">#FF101010</color>
-    <color name="wait_text">#FF9E9E9E</color>
+    <color name="wait_background">#FF14120E</color>
+    <color name="wait_text">#FF8A857A</color>
+    <color name="wait_rule">#FFC9821F</color>
 </resources>

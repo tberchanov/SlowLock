@@ -47,11 +47,11 @@ here, so the obligations below are mostly prohibitions, and the manual plan chec
 
 | # | Obligation |
 |---|---|
-| W8 | Show one fixed message. No countdown, no remaining or elapsed time, no progress, no spinner, no animation, no transition, no pulse (FR-023, FR-025) |
+| W8 | Show one fixed message. No countdown, no remaining or elapsed time, no progress, no spinner, no animation, no transition, no pulse (FR-023, FR-025). **Feature 004 adds:** the screen must also *arrive* complete — ground, rule and message in one frame, never one before another (004 FR-029) |
 | W9 | No sound, no vibration, no haptics, no notification (FR-024) |
 | W10 | No clickable, focusable, or draggable element anywhere on the screen. A tap does nothing (FR-026) |
 | W11 | Do not name or depict the target app. The same screen for every app (spec, Assumptions) |
-| W12 | Do not read `MaterialTheme`, dynamic colour, or any wallpaper-derived value. Paint the flat colour resource that the activity's `windowBackground` also uses, so the starting window and the composed screen are indistinguishable (R7). Provide a `values-night` variant of both colours: the screen must follow the device's light/dark setting, or it becomes a full-brightness white field at night on the one screen designed not to be noticed |
+| W12 | Do not read `MaterialTheme`, dynamic colour, or any wallpaper-derived value — the screen resolves its own colours and type, so a change to the app's theme cannot reach it. Paint the colour resource that the activity's `windowBackground` also uses, so the starting window and the composed screen are indistinguishable (R7). Provide a `values-night` variant of **every** wait colour: the screen must follow the device's light/dark setting, or it becomes a full-brightness field at night on the one screen designed not to be noticed. **Amended by feature 004 (FR-037):** the resource was described here as *flat* and unbranded; it is now the app's own ground, muted ink and accent. The prohibition on reading `MaterialTheme` is unchanged and is now the mechanism that keeps this screen isolated (004 FR-033), and the `values-night` obligation is widened from two colours to three |
 | W13 | Hold `FLAG_KEEP_SCREEN_ON` for the window's lifetime, and nothing longer. No `PowerManager` wake lock, ever. Permitted by Constitution IV as amended in v1.1.0, on exactly these terms (R6) |
 | W14 | Register no back handler. The system's back must finish the activity, which abandons the wait (FR-029) |
 

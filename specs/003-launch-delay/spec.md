@@ -280,13 +280,33 @@ opens and that nothing appears later.
 - **FR-021**: Tapping a pinned shortcut whose app has a saved delay MUST show a full-screen wait
   screen instead of opening the target app. This **replaces** feature 002's FR-016 (open
   immediately).
-- **FR-022**: The wait screen's background MUST be on screen within 200 ms of the tap, and its
-  message within 500 ms — soon enough that the user never wonders whether their tap registered,
-  and stated as a number so a tester can judge it.
-- **FR-023**: The wait screen MUST be visually static for the entire wait. It MUST NOT show a
-  countdown, a remaining or elapsed time, a progress bar or ring, a spinner, an animation, a
-  transition, a blinking or pulsing element, or anything else that changes while the user
-  watches.
+- **FR-022**: The wait screen's background MUST be on screen within 200 ms of the tap, and the
+  screen MUST be **visually complete** — background, accent rule and message together — within
+  500 ms. Soon enough that the user never wonders whether their tap registered, and stated as a
+  number so a tester can judge it.
+
+  > **Amended by feature 004 (FR-037, spec Clarifications 2026-08-24).** This requirement
+  > originally bound only the background and the message, and permitted the message to arrive
+  > after the background as a visible second step. It no longer does: the screen arrives complete
+  > in a single frame, with no intermediate state in which some elements are drawn and others are
+  > not. A bundled, blocking-loaded typeface is what made the stricter rule achievable — the
+  > earlier two-stage budget existed because a system font could not guarantee it.
+- **FR-023**: From the frame in which it is complete (FR-022) until the wait ends, the wait
+  screen MUST be visually static. It MUST NOT show a countdown, a remaining or elapsed time, a
+  progress bar or ring, a spinner, an animation, a transition, a blinking or pulsing element, or
+  anything else that changes while the user watches.
+
+  > **Amended by feature 004 (FR-037).** The rule above is unchanged and remains binding. What
+  > changed is the justification that once accompanied it. This feature's predecessor argued the
+  > screen must also be *unbranded* — "flat, unbranded and unsaturated", with anything having
+  > character treated as a defect. That was one means to an end, not the end. **The binding
+  > property was always that the screen is static and not worth reading twice**, and a screen can
+  > be quiet while still belonging to the app it came from. The wait screen now uses SlowLock's
+  > own ground, a short accent rule and the app's monospaced face. It still does not move.
+  >
+  > The constitution authorises this without further amendment: since v1.1.0 its scope boundary
+  > states that how the delay screen presents — countdown, progress, or deliberately static — is
+  > a product decision for the feature that builds it.
 - **FR-024**: The wait screen MUST NOT use sound, vibration, haptics, or a notification at any
   point.
 - **FR-025**: The wait screen MUST show a short, fixed message telling the user to wait, and

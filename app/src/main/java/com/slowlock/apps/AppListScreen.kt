@@ -17,9 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,6 +46,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.slowlock.R
+import com.slowlock.ui.components.ScreenHeader
+import com.slowlock.ui.theme.SlowLockType
 
 /**
  * The launchable apps on this profile, one row per package, ordered by collated label.
@@ -51,6 +55,15 @@ import com.slowlock.R
  * The screen owns no navigation and launches nothing: it reports a selection through
  * [onAppSelected] and stops there, which is what keeps swapping the launch for navigation to
  * the future configuration screen a one-line change (`contracts/selection-handoff.md`).
+ *
+ * Feature 004 restyled it and changed nothing else. The view model, the enumeration, the query,
+ * the icon cache and the scroll position that survives a round trip through the delay and icon
+ * screens are all untouched (`contracts/screen-inventory.md` S1).
+ *
+ * **No back control and no step counter**, though the design source draws both. This screen is
+ * the app's root in Phase 1, so a back tile would duplicate the system gesture, and a `1 / 3`
+ * counter would claim a wizard entered from a Locks screen that does not exist yet. Both arrive
+ * in Phase 2 (spec **Out of Scope**, contract U1).
  */
 @Composable
 fun AppListScreen(
@@ -59,22 +72,11 @@ fun AppListScreen(
     viewModel: AppListViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // Hoisted above the display-state `when` on purpose: the LazyColumn leaves composition
-    // whenever the loading, empty, or no-results branch takes over, and a state remembered
-    // inside that branch would lose the scroll offset every time the query stopped matching.
-    // Saveable too, so the offset survives the tap-and-return round trip — which backgrounds
-    // the process and so exercises FR-017 harder than rotation does — alongside the
-    // ViewModel's list and its SavedStateHandle-backed query (manual cases T1.13, T1.16).
     val listState = rememberLazyListState()
-
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Re-read on every entry, rather than observing package broadcasts (FR-013, research.md R9).
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refresh() }
 
-    // Keyed by the message, so a second unavailable tap raises it again rather than being
-    // swallowed as "no change" (FR-014).
     state.unavailableAppMessage?.let { message ->
         LaunchedEffect(message) {
             snackbarHostState.showSnackbar(message)
@@ -84,6 +86,7 @@ fun AppListScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { contentPadding ->
         Column(
@@ -91,15 +94,17 @@ fun AppListScreen(
                 .fillMaxSize()
                 .padding(contentPadding),
         ) {
-            // Only offered once there is something to narrow: a search field over a spinner or
-            // over an empty list is a control that cannot do anything.
+            ScreenHeader(
+                title = stringResource(R.string.app_list_title),
+                onBack = null,
+                modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING),
+            )
             if (!state.isLoading && state.apps.isNotEmpty()) {
                 SearchField(
                     query = state.query,
                     onQueryChange = viewModel::onQueryChanged,
                 )
             }
-
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading -> LoadingState()
@@ -107,15 +112,22 @@ fun AppListScreen(
                     state.hasNoResults -> NoResultsState(query = state.query)
                     else -> LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = HORIZONTAL_PADDING),
                     ) {
                         items(state.visibleApps, key = { it.packageName }) { app ->
                             AppRow(
                                 app = app,
                                 iconCache = viewModel.iconCache,
-                                // The ViewModel decides whether the package still resolves; only
-                                // then does the selection cross the seam (FR-014, contract P2).
                                 onClick = { viewModel.onAppTapped(app.packageName, onAppSelected) },
+                            )
+                            // The design divides rows with the Fill token rather than the Line
+                            // hairline used for borders elsewhere — a deliberate difference read
+                            // off the artboard, not an oversight (contract C9, S1).
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                             )
                         }
                     }
@@ -126,12 +138,11 @@ fun AppListScreen(
 }
 
 /**
- * Type-to-filter over the loaded list (FR-007). No debounce: filtering ~150 in-memory entries
- * is sub-millisecond, so every keystroke can narrow the list directly (research.md R4).
+ * The search box: 52dp, 14dp corners, card fill, hairline border.
  *
- * The trailing affordance restores the full list in its collated order (FR-008). It is a glyph
- * rather than a Material icon because `material-icons` is not a dependency of this project and
- * adding one for a single "✕" is not justified (Constitution II).
+ * Still an `OutlinedTextField` — the design changes how it looks, not what it does, and the
+ * component already carries the IME behaviour, the cursor, selection and accessibility. Only the
+ * container colours and the border are overridden (FR-011).
  */
 @Composable
 private fun SearchField(
@@ -144,9 +155,25 @@ private fun SearchField(
         onValueChange = onQueryChange,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text(stringResource(R.string.app_list_search_hint)) },
+            .padding(horizontal = HORIZONTAL_PADDING, vertical = 8.dp)
+            .height(SEARCH_HEIGHT),
+        placeholder = {
+            Text(
+                text = stringResource(R.string.app_list_search_hint),
+                style = SlowLockType.Body,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        },
+        textStyle = SlowLockType.Body,
         singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            cursorColor = MaterialTheme.colorScheme.primary,
+        ),
         trailingIcon = {
             if (query.isNotEmpty()) {
                 val clearLabel = stringResource(R.string.app_list_clear_query)
@@ -162,10 +189,6 @@ private fun SearchField(
     )
 }
 
-/**
- * Fixed height and a fixed icon box, so a row never changes size once its icon resolves and
- * scrolling cannot jump (SC-003). Long labels ellipsize rather than reflow.
- */
 @Composable
 private fun AppRow(
     app: InstalledApp,
@@ -177,27 +200,21 @@ private fun AppRow(
         modifier = modifier
             .fillMaxWidth()
             .height(ROW_HEIGHT)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppIcon(app = app, iconCache = iconCache)
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(14.dp))
         Text(
             text = app.label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = SlowLockType.RowLabel,
+            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-/**
- * Loads this row's icon lazily. The effect is keyed by the cache key's two halves and is
- * cancelled with the row's composition, so scrolling past an entry stops its work (FR-011).
- *
- * A failure leaves the placeholder in place; the row stays selectable (FR-016).
- */
 @Composable
 private fun AppIcon(
     app: InstalledApp,
@@ -205,18 +222,16 @@ private fun AppIcon(
     modifier: Modifier = Modifier,
 ) {
     var icon by remember(app.packageName) { mutableStateOf<ImageBitmap?>(null) }
-
     LaunchedEffect(app.packageName, app.versionCode) {
         icon = iconCache.icon(app)
     }
-
     Box(modifier = modifier.size(ICON_SIZE)) {
         val bitmap = icon
         if (bitmap == null) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
         } else {
@@ -232,33 +247,23 @@ private fun AppIcon(
 @Composable
 private fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.app_list_empty),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    Message(text = stringResource(R.string.app_list_empty), modifier = modifier)
 }
 
-/**
- * Shown when apps exist but the query matches none of them (FR-006). Deliberately worded
- * differently from [EmptyState] and naming the query, so "your filter found nothing" is never
- * mistaken for "this device has no apps".
- */
 @Composable
 private fun NoResultsState(query: String, modifier: Modifier = Modifier) {
+    Message(text = stringResource(R.string.app_list_no_results, query), modifier = modifier)
+}
+
+/** The empty and no-results states. Restyled; wording deliberately unchanged (FR-013). */
+@Composable
+private fun Message(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxSize()
@@ -266,12 +271,14 @@ private fun NoResultsState(query: String, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(R.string.app_list_no_results, query),
-            style = MaterialTheme.typography.bodyLarge,
+            text = text,
+            style = SlowLockType.Body,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 private val ROW_HEIGHT = 64.dp
-private val ICON_SIZE = 48.dp
+private val ICON_SIZE = 44.dp
+private val SEARCH_HEIGHT = 52.dp
+private val HORIZONTAL_PADDING = 20.dp

@@ -80,6 +80,13 @@ run" at the end of the feature means M1–M6 and M8, with M7's earlier result ca
 | M3.7 | Open the delay screen for a configured app and press back | The saved delay is unchanged on the next tap of its icon | FR-020 |
 | M3.8 | Configure an app, decline the launcher's pin dialog, reopen that app in the list | The chosen delay is shown — a configuration with no icon is saved and harmless | Accepted limitations |
 
+> **Feature 004 amends this tier.** The wait screen was restyled — SlowLock's own ground, a short
+> accent rule and the app's monospaced face in place of the deliberately unbranded grey field
+> (004 FR-037). Cases asserting the *old appearance* are marked superseded below and are re-run
+> as `specs/004-visual-redesign/manual-test-plan.md` **M5.1–M5.13**. Everything in this tier about
+> *behaviour* — timing, abandonment, rotation, the hand-off, the display staying awake — is
+> unchanged and still binding.
+
 ## M4 — The wait screen is boring
 
 **Record the screen for the whole of a 30-second wait** — the longest the slider offers. SC-002 is checked by comparing the first
@@ -88,15 +95,15 @@ watching. Run the tier twice: once in light mode, once in dark (M4.9).
 
 | # | Steps | Expected | Requirement |
 |---|---|---|---|
-| M4.1 | Tap a configured shortcut | The background is there within 200 ms — on the tap's own frame in practice — and the message within 500 ms. No white flash, no colour change, no app-icon splash | FR-022, W12 |
-| M4.2 | Compare the recording's first **settled** frame (message rendered) with its last | Identical. Frames before it settles are the screen arriving and are excluded | FR-023, SC-002 |
+| M4.1 | Tap a configured shortcut | The background is there within 200 ms — on the tap's own frame in practice — and the screen is **complete** within 500 ms. No white flash, no colour change, no app-icon splash. **Superseded by feature 004 M5.1:** the message may no longer arrive as a visible second step after the background (004 FR-022 as amended, FR-029) | FR-022, W12 |
+| M4.2 | Compare the recording's first **settled** frame (message rendered) with its last | Identical. Frames before it settles are the screen arriving and are excluded. **Superseded by feature 004 M5.3/M5.4**, which tightens "settles" to a single frame rather than a window | FR-023, SC-002 |
 | M4.3 | Look for a countdown, a timer, a bar, a ring, a spinner, a pulse | None of them exists | FR-023, W8 |
 | M4.4 | Listen and feel | No sound, no vibration, no notification | FR-024, W9 |
 | M4.5 | Tap the screen repeatedly, tap the text, try to drag it | Nothing happens. The wait is neither shortened nor extended | FR-026, W10 |
 | M4.6 | Wait past the device's screen timeout (set it to 15 s, use the maximum 30 s delay) | The display stays on for the whole wait | W13, R6 |
 | M4.7 | Check the screen against the target app | It does not name or depict the target app; it is identical for every app | W11 |
 | M4.8 | Rotate the device mid-wait | The wait neither restarts nor extends — the target opens at the original moment | FR-027, W4 |
-| M4.9 | Switch the device to dark mode and repeat M4.1 and M4.2 | A dark ground, not a white one, and still no flash on tap — the window background and the screen match in dark mode too | W12, spec Assumptions |
+| M4.9 | Switch the device to dark mode and repeat M4.1 and M4.2 | A dark ground, not a white one, and still no flash on tap — the window background and the screen match in dark mode too. **Superseded by feature 004 M5.2**, which asserts the same behaviour against the redesigned dark palette | W12, spec Assumptions |
 
 ## M5 — Ending the wait
 

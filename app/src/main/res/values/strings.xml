@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">SlowLock</string>
+    <!-- The app list's title. New in feature 004: the screen previously had no heading. -->
+    <string name="app_list_title">Choose an app</string>
     <string name="app_list_search_hint">Search apps</string>
     <string name="app_list_clear_query">Clear search</string>
     <string name="app_list_empty">No apps to show.</string>
@@ -8,18 +10,69 @@
     <string name="app_list_icon_description">%1$s icon</string>
 
     <!--
+        The back affordance's label, shared by every screen that has one (contract U1).
+
+        Feature 004 gave the three configuration screens a single ScreenHeader, so the
+        per-screen delay_config_back and shortcut_config_back strings it replaces are now
+        unused. They are left in place rather than deleted: FR-042 confines this feature to
+        display values, and removing resource names is a separate, riskier change.
+    -->
+    <string name="back">Back</string>
+
+    <!--
         The entire text of the wait screen (FR-025, obligations W8 and W11).
 
         It must not name the target app, must not mention a duration, and must not suggest that
         anything is loading. "Please wait" is deliberately the dullest phrasing available: the
         screen's job is to be uninteresting for as long as the delay lasts, and a friendlier or
         more explanatory line is a line worth reading twice.
+
+        Feature 004 lower-cased it to match the design source. Stored lower-case rather than
+        transformed at display time (contract C8): a locale-sensitive case transform on
+        user-visible text is a trap, and the string resource should hold exactly what is drawn.
     -->
-    <string name="wait_message">Please wait</string>
+    <string name="wait_message">please wait</string>
 
     <string name="delay_config_title">Wait before opening</string>
     <string name="delay_config_back">Back</string>
-    <string name="delay_config_next">Next</string>
+    <!--
+        The primary action, reworded by feature 004 (FR-020).
+
+        "Next" named the mechanism; the design names the outcome. The user is going to choose an
+        icon, and saying so is what lets the step indicator the canvas draws stay out of Phase 1
+        without the flow feeling unmoored.
+    -->
+    <string name="delay_config_next">Choose the icon</string>
+
+    <!--
+        The unit caption beneath the delay numeral (FR-014).
+
+        Stored capitalised on purpose (contract C8): the capitalisation is stylistic, and running
+        uppercase() on user-visible text at display time is a locale trap - Turkish dotted and
+        dotless i being the standing example. Letter-spacing comes from the text style, never
+        from spaces inserted between the letters, which would destroy it for screen readers.
+
+        Translators: render this in your language's normal wording; capitalise it if your script
+        has case, and simply do not if it does not.
+    -->
+    <string name="delay_config_seconds_caption">SECONDS</string>
+
+    <!-- The slider's range endpoints. Mono, and deliberately terse. -->
+    <string name="delay_config_range_min">1s</string>
+    <string name="delay_config_range_max">30s</string>
+
+    <!--
+        A one-tap delay preset's visible label (FR-017). %1$d is the number of seconds.
+
+        Its visible text is a bare value, so it needs the separate description below to announce
+        as the action it performs rather than as two characters (FR-044).
+
+        The description is a plain string rather than a plural because no preset is 1 second -
+        they are 5, 10 and 30 (DelayRange.PRESETS, asserted by DelayRangeTest). If a preset of 1
+        is ever added, this becomes a <plurals> in the same commit.
+    -->
+    <string name="delay_config_preset">%1$ds</string>
+    <string name="delay_config_preset_description">Wait %1$d seconds</string>
 
     <!--
         The readout beside the slider (FR-007, obligation D4).
@@ -36,15 +89,70 @@
         <item quantity="other">%1$d seconds</item>
     </plurals>
 
-    <string name="shortcut_config_title">New shortcut</string>
+    <!--
+        Feature 004 made "lock" the canonical user-facing noun (FR-041). "Shortcut" now refers
+        only to the Android mechanism and survives in places the user never reads - resource
+        names, class names, contract filenames, and the launcher's own confirmation dialog.
+
+        The resource NAMES below are deliberately untouched (FR-042). ShortcutLaunchActivity's
+        fully-qualified name is written into every icon already sitting on a user's home screen,
+        and renaming anything in that chain to match a wording change would break them. The word
+        the user reads and the identifier the system stores are allowed to differ; here they must.
+    -->
+    <string name="shortcut_config_title">New lock</string>
+
+    <!--
+        The preview card's delay line (FR-022). "10 second wait".
+
+        Both English forms are identical on purpose: "second" is an adjective here, as in "a
+        10-second wait", so it does not inflect. The design source does the same.
+
+        It is still a <plurals> rather than a format string, because that identity is a fact about
+        English and not about every language. A translator into a language that does inflect an
+        attributive numeral has the forms available; with a plain string they would not.
+
+        Deliberately not a reuse of delay_seconds: that one reads as a bare quantity ("10
+        seconds") and this one as a description of the lock ("10 second wait").
+    -->
+    <plurals name="delay_wait">
+        <item quantity="one">%1$d second wait</item>
+        <item quantity="other">%1$d second wait</item>
+    </plurals>
     <string name="shortcut_config_back">Back</string>
-    <string name="shortcut_config_create">Create shortcut</string>
+    <string name="shortcut_config_create">Add to home screen</string>
+    <!--
+        The section label above the icon-treatment tiles (FR-023).
+
+        Stored capitalised because the capitalisation is stylistic (contract C8) - see the note on
+        delay_config_seconds_caption for why it is not uppercased at display time.
+    -->
+    <string name="shortcut_config_icon_label">ICON</string>
+
+    <!--
+        The line beneath "Add to home screen" (FR-025).
+
+        It sets the expectation that the next thing the user sees is a system dialog they did not
+        ask SlowLock for. The app cannot suppress it and should not pretend otherwise.
+    -->
+    <string name="shortcut_config_confirm_note">Your launcher will ask you to confirm.</string>
+
     <string name="shortcut_treatment_original">Original</string>
     <string name="shortcut_treatment_invert">Inverted</string>
     <string name="shortcut_treatment_gray">Gray</string>
-    <string name="shortcut_target_unavailable">That app is no longer available, so no shortcut was created.</string>
+    <string name="shortcut_target_unavailable">That app is no longer available, so no lock was created.</string>
     <string name="shortcut_launch_unavailable">That app is no longer available.</string>
-    <string name="shortcut_icon_unavailable">That app\'s icon couldn\'t be loaded, so no shortcut can be created right now. Go back and try again.</string>
+    <string name="shortcut_icon_unavailable">That app\'s icon couldn\'t be loaded, so no lock can be created right now. Go back and try again.</string>
+    <!--
+        The heading above the unsupported-launcher explanation (FR-034).
+
+        Stored capitalised because the capitalisation is stylistic (contract C8) - see the note on
+        delay_config_seconds_caption for why it is not uppercased at display time.
+
+        It names the consequence the user can see ("no room on the home screen") rather than the
+        mechanism they cannot act on. The sentence beneath it is what explains and what to do.
+    -->
+    <string name="pin_unsupported_eyebrow">NO ROOM ON THE HOME SCREEN</string>
+
     <string name="pin_unsupported_message">Your home screen won\'t let SlowLock add icons to it. Switching to a different home screen app should fix this.</string>
     <string name="pin_unsupported_open_settings">Choose home screen app</string>
     <string name="pin_unsupported_recheck">Check again</string>

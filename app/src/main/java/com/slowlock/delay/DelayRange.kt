@@ -54,4 +54,29 @@ object DelayRange {
         val rounded = (offset + STEP_SECONDS / 2) / STEP_SECONDS * STEP_SECONDS
         return MIN_SECONDS + rounded
     }
+
+    /**
+     * One-tap shortcuts to the delays people actually pick (FR-017, feature 004).
+     *
+     * **Additive, and deliberately so.** Presets are a convenience over the range above, never an
+     * alternative to it: every value here is inside `MIN_SECONDS..MAX_SECONDS` and is a stop
+     * [snap] leaves alone, both asserted in `DelayRangeTest`. A preset the slider could not also
+     * reach would be a second, competing answer to "what is a legal delay", which is exactly the
+     * kind of drift `contracts/delay-config-store.md` exists to prevent one layer down.
+     *
+     * 30 is the maximum of the range as well as a preset — that is the design's choice, not a
+     * coincidence, and it is why the preset row's last entry and the slider's right-hand label
+     * read the same.
+     */
+    val PRESETS: List<Int> = listOf(5, 10, 30)
+
+    /**
+     * The preset matching [seconds], or null when none does.
+     *
+     * A pure lookup, and the whole of the preset row's selection logic. **Nothing stores which
+     * preset is selected** — the delay screen asks this question at composition time and renders
+     * the answer, which is what makes "the user dragged to 17 seconds, so nothing is highlighted"
+     * correct by construction rather than by remembering to clear a flag (FR-018, US2 scenario 3).
+     */
+    fun presetFor(seconds: Int): Int? = PRESETS.firstOrNull { it == seconds }
 }

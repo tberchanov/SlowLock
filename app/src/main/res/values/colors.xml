@@ -9,16 +9,44 @@
     <color name="white">#FFFFFFFF</color>
 
     <!--
-        The whole visual design of the wait screen (obligation W12, research.md R7).
+        The screen ground, mirroring the Bone token in ui/theme/Color.kt (contract C1).
+
+        It exists as a resource for exactly one reason: Theme.SlowLock paints it as the window
+        background, so a cold launch lands on the final colour instead of flashing the platform's
+        white starting window and flipping to bone a frame later (contract C5, research R5). This
+        is the same class of defect FR-030 guards on the wait screen; nobody had checked the main
+        window for it.
+
+        Duplicating a token across Kotlin and XML is a cost, not a pattern. It is paid here
+        because a window background is resolved by the framework before any Compose code runs, so
+        the Kotlin value is not reachable at the moment it is needed.
+    -->
+    <color name="screen_ground">#FFF3F0EA</color>
+
+    <!--
+        The wait screen's three values (feature 004, FR-027).
 
         Both are painted twice: by Theme.SlowLock.Wait's windowBackground, so the system's
         starting window is already the final colour on the tap's own frame, and by WaitScreen
-        itself. Matching them is what removes the flash FR-022 forbids.
+        itself. Matching them is what removes the flash FR-030 forbids.
 
-        Deliberately flat, unbranded and unsaturated. This is the one screen in the app designed
-        not to be looked at; anything with character here is a defect. A values-night variant of
-        both is mandatory - see values-night/colors.xml.
+        WHAT CHANGED IN FEATURE 004, and why the old comment here is gone. Feature 003 justified
+        this screen as "flat, unbranded and unsaturated", and said anything with character here
+        was a defect. That was one means to an end, not the end. The binding property was always
+        that the screen is STATIC and not worth reading twice - and a screen can be quiet while
+        still belonging to the app it came from. These values are now the app's own ground, its
+        muted ink and its accent (FR-037 amends 003's FR-022/FR-023 and the wait-screen
+        contract's W12).
+
+        What did NOT change: nothing here animates, nothing varies between apps, nothing counts
+        down. The rule is unchanged; only the palette is.
+
+        These deliberately mirror the Bone / Ink40 / Amber tokens in ui/theme/Color.kt rather
+        than referencing them - WaitScreen resolves its own colours precisely so a change to the
+        app's theme cannot reach it (FR-033). A values-night variant of all three is mandatory,
+        not optional - see values-night/colors.xml.
     -->
-    <color name="wait_background">#FFFAFAFA</color>
-    <color name="wait_text">#FF6E6E6E</color>
+    <color name="wait_background">#FFF3F0EA</color>
+    <color name="wait_text">#FF6F6A5E</color>
+    <color name="wait_rule">#FFC9821F</color>
 </resources>
