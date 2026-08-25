@@ -32,3 +32,14 @@ val Shapes = Shapes(
 
 /** The app pill on the delay screen. Fully rounded at any height. */
 val Pill = RoundedCornerShape(percent = 50)
+
+/**
+ * The delay badge on a Locks row (007 FR-015).
+ *
+ * The second shape with no Material slot, and it is here for the same reason [Pill] is: C9's five
+ * design radii already fill M3's five slots, 9dp is a real value on the `New · Locks` artboard, and
+ * there is nowhere sensible to put it. Forcing it into [Shapes.extraSmall] (12dp) would put a
+ * corner on screen that the design does not contain, and renumbering the slots to make room would
+ * restyle every screen in the app.
+ */
+val Badge = RoundedCornerShape(9.dp)

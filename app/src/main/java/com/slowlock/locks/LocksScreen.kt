@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -45,7 +47,7 @@ import com.slowlock.R
 import com.slowlock.apps.AppIconCache
 import com.slowlock.shortcut.IconTreatment
 import com.slowlock.ui.components.PrimaryAction
-import com.slowlock.ui.components.ScreenHeader
+import com.slowlock.ui.theme.Badge as BadgeShape
 import com.slowlock.ui.theme.SlowLockType
 
 /**
@@ -55,10 +57,14 @@ import com.slowlock.ui.theme.SlowLockType
  * every mutation leaves through a callback. [LocksViewModel] does the reading; this draws the
  * answer.
  *
- * **The count states the number and nothing more** (FR-011). The design source reads
- * "3 ON YOUR HOME SCREEN" and that half is deliberately not shipped: Android cannot tell the app
- * whether those icons are still there, and telling a user who deleted one that it is still on
- * their home screen is exactly the claim Constitution I forbids.
+ * **Feature 007 restyled this screen from the `New · Locks` artboard** and changed nothing about
+ * what it does. Two things moved: the heading became this screen's own rather than the flow's
+ * `ScreenHeader` (see [Heading], contract L1), and a row's delay left the joined second line for a
+ * badge at the trailing edge (see [LockRow], contract L9). Every behavioural rule feature 005 wrote
+ * — K2 through K6 — is untouched.
+ *
+ * **The count states the number and nothing more** (FR-011, and still true after 007). The reason
+ * is on [Heading], along with the rest of the heading block.
  *
  * **No search, no filter, no sort, no reorder, no per-lock toggle, no "pin again."** All are
  * permanently out of scope, and this list is expected to hold tens of rows rather than the app
@@ -89,23 +95,7 @@ fun LocksScreen(
                 .padding(contentPadding)
                 .padding(horizontal = HORIZONTAL_PADDING),
         ) {
-            // `onBack = null`: this screen is the app's root, so there is nowhere to go back to
-            // and no step to count. U1's rule then renders no tile and no leading space.
-            ScreenHeader(
-                title = stringResource(R.string.locks_title),
-                onBack = null,
-            )
-            Text(
-                text = pluralStringResource(
-                    R.plurals.locks_count,
-                    state.locks.size,
-                    state.locks.size,
-                ),
-                style = SlowLockType.Footnote,
-                // Ink40 on Bone (C1, C3). Mono, because it is a number the user reads (C6).
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
+            Heading(count = state.locks.size)
 
             LazyColumn(
                 state = listState,
@@ -146,6 +136,54 @@ fun LocksScreen(
                 onDismiss = onDismissExplanation,
             )
         }
+    }
+}
+
+/**
+ * The screen's title and the count beneath it (007 US2, contract L1–L5).
+ *
+ * **This screen draws its own heading and deliberately does not use `ScreenHeader`.** That
+ * component belongs to the three flow screens, and generalising it into a large-title variant
+ * would put this screen's design decisions inside a component with three other callers for no
+ * gain — the block is a title, a gap, and a caption (contract L1). `ScreenHeader` is unchanged.
+ *
+ * **No controls.** No back tile, no step counter, no menu, no search: the Locks screen is the app's
+ * root and there is nowhere to go back to (contract L5).
+ *
+ * **The caption states the count and nothing more.** The artboard reads "3 ON YOUR HOME SCREEN"
+ * and the second half is still not shipped — Android cannot tell the app whether those icons are
+ * still there, and telling a user who deleted one that it is still on their home screen is exactly
+ * the claim Constitution I forbids (005 FR-011, contract L3). 007 adopted the *styling* of that
+ * line and refused its claim.
+ *
+ * **There is no zero state.** An empty list renders [IntroScreen] instead, so the smallest number
+ * this caption can ever state is one (`LocksUiState.showsLocks`).
+ */
+@Composable
+private fun Heading(count: Int, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(top = 8.dp, bottom = 20.dp)) {
+        Text(
+            text = stringResource(R.string.locks_title),
+            style = SlowLockType.TitleDisplay,
+            // Ink on Bone (C3).
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(4.dp))
+        // **Two resources for one sentence, and the split is the point.** The capitalised form is
+        // drawn; the ordinary form is spoken. `uppercase()` at display time was the obvious way to
+        // avoid the duplication and is forbidden by contract C8 — it is a locale trap (Turkish
+        // dotted and dotless i is the standing example), and it takes the capitalisation decision
+        // away from the translator, who is the only person who knows whether their script has case
+        // at all. Handing the un-capitalised string to the screen reader is the other half: it
+        // hears "3 locks" rather than being asked to spell out capitals (FR-008, FR-012, L4).
+        val spoken = pluralStringResource(R.plurals.locks_count, count, count)
+        Text(
+            text = pluralStringResource(R.plurals.locks_count_caption, count, count),
+            style = SlowLockType.Count,
+            // Ink40 on Bone (C1, C3). Mono, because it leads with a number the user reads (C6).
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.semantics { contentDescription = spoken },
+        )
     }
 }
 
@@ -219,6 +257,18 @@ private fun RemovalHelp(
  * A card in a list, so `shapes.large` — the 18dp slot C9 reserved for this screen by name — with
  * the `Card` fill and the `Line` hairline the design gives raised surfaces.
  *
+ * **Feature 007 restyled the available row from the `New · Locks` artboard** (contract L9). The
+ * icon grew to 48dp, the padding to 14dp, the name to Medium, and — the one change that is not
+ * purely visual — the delay left the joined second line for [DelayBadge] at the trailing edge,
+ * leaving the treatment alone on line 2. This **amends feature 005's contract K row layout and
+ * nothing else about it**: the row still carries app name, delay and treatment, so nothing 005
+ * promised the user is withdrawn, and tap-to-edit, long-press-to-explain, the custom accessibility
+ * action, and the unavailable row's whole treatment are all exactly as 005 left them.
+ *
+ * **The unavailable row was deliberately not restyled** (FR-020, contract L10). The artboards do
+ * not draw it, its body is a sentence rather than a name plus a detail, and it gets no badge —
+ * inventing an artboard for it is not this feature's job.
+ *
  * **The row does not block on its icon** (FR-015): it draws immediately with the `Fill`
  * placeholder and the bitmap arrives when it arrives, the same way `AppListRow` already does it.
  *
@@ -277,13 +327,15 @@ private fun LockRow(
                 )
             }
             .heightIn(min = ROW_MIN_HEIGHT)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(ROW_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LockIcon(lock = lock, iconCache = iconCache)
         Spacer(Modifier.width(14.dp))
         if (lock.isAvailable) {
             AvailableRowText(lock = lock, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            DelayBadge(seconds = lock.delaySeconds)
         } else {
             UnavailableRowText(lock = lock, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
@@ -304,30 +356,63 @@ private fun LockRow(
 
 @Composable
 private fun AvailableRowText(lock: Lock, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(
             // Resolved fresh on every read, never stored (FR-012, SC-006). A renamed app shows its
             // new name here without anything migrating.
             text = lock.label.orEmpty(),
-            style = SlowLockType.RowLabel,
+            style = SlowLockType.RowTitle,
             // Ink on Card (C3).
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             // The label yields first: the delay and the treatment are what the row is *for*, and
-            // they stay legible (spec edge case).
+            // they stay legible (spec edge case, 007 FR-017).
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringResource(
-                R.string.locks_row_detail,
-                pluralStringResource(R.plurals.delay_wait, lock.delaySeconds, lock.delaySeconds),
-                stringResource(lock.treatment.labelRes),
-            ),
+            // **The treatment alone since 007** (FR-014, contract L9). The delay used to share
+            // this line through the `locks_row_detail` joiner; it now sits in the badge, where it
+            // is a number the eye lands on rather than a clause the eye reads.
+            text = stringResource(lock.treatment.labelRes),
             style = SlowLockType.Footnote,
-            // Ink40 on Card (C3). Mono, because the delay is a number the user reads (C6).
+            // Ink40 on Card (C3).
             color = MaterialTheme.colorScheme.outline,
         )
     }
+}
+
+/**
+ * The delay, at the trailing edge of an available row (007 FR-015, contract L6, L7).
+ *
+ * **This is where the delay lives now.** Feature 005 joined it to the treatment on the row's second
+ * line; the `New · Locks` artboard pulls it out into a badge, because the delay is the product's
+ * central value and a number the eye lands on says that where a clause does not.
+ *
+ * **Trailing, not right.** Under RTL the badge moves to the leading edge with everything else.
+ *
+ * **It never shrinks.** The badge carries no `weight`, so a long app name ellipsises and the delay
+ * stays whole — the row's name is the part that can afford to yield (FR-017).
+ *
+ * **It shows "10s" and says "10 second wait".** The compact form is for the eye alone; a screen
+ * reader left with it would read "ten s". The spoken form is the same `delay_wait` plural the
+ * preview card uses, so a lock is described the same way before and after it is made (FR-018).
+ *
+ * `AmberDark on AmberWash` — 5.84:1, and one of the pairings `SlowLockPaletteTest` already asserts.
+ */
+@Composable
+private fun DelayBadge(seconds: Int, modifier: Modifier = Modifier) {
+    val spoken = pluralStringResource(R.plurals.delay_wait, seconds, seconds)
+    Text(
+        text = stringResource(R.string.locks_delay_badge, seconds),
+        style = SlowLockType.Badge,
+        // AmberDark on AmberWash (C2, C3): the accent as a word is only ever the dark token.
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = modifier
+            .clip(BadgeShape)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(horizontal = 9.dp, vertical = 5.dp)
+            .semantics { contentDescription = spoken },
+    )
 }
 
 /**
@@ -374,7 +459,10 @@ private fun LockIcon(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .clip(MaterialTheme.shapes.extraSmall)
+                    // 14dp, the artboard's placeholder corner. Only the PLACEHOLDER is
+                    // clipped: a loaded launcher icon already carries its own mask, and
+                    // re-masking it here would shave the adaptive icons meant to be round.
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
         } else {
@@ -406,5 +494,6 @@ private val IconTreatment.labelRes: Int
     }
 
 private val ROW_MIN_HEIGHT = 64.dp
-private val ICON_SIZE = 44.dp
+private val ROW_PADDING = 14.dp
+private val ICON_SIZE = 48.dp
 private val HORIZONTAL_PADDING = 20.dp

@@ -57,6 +57,21 @@ val JetBrainsMono = FontFamily(
  */
 object SlowLockType {
 
+    /**
+     * The Locks screen's title, and only that.
+     *
+     * A **sibling** of [Title] rather than a replacement for it, and the distinction is the point
+     * of 007 User Story 2: [Title] is the *flow's* heading — a step in a wizard, sat beside a back
+     * tile — while this is the app's home screen announcing itself. The `New · Locks` artboard
+     * draws them at visibly different sizes for that reason, so both exist.
+     */
+    val TitleDisplay = TextStyle(
+        fontFamily = InstrumentSans,
+        fontWeight = FontWeight.Medium,
+        fontSize = 30.sp,
+        letterSpacing = (-0.015).em,
+    )
+
     /** Screen titles: "Choose an app", "Wait before opening", "New lock". */
     val Title = TextStyle(
         fontFamily = InstrumentSans,
@@ -80,6 +95,21 @@ object SlowLockType {
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
+    )
+
+    /**
+     * A lock's app name on the Locks screen.
+     *
+     * A **sibling** of [RowLabel], not an edit to it (007 FR-025). The two artboards differ on
+     * purpose: the app list draws hundreds of names at Regular, where Medium would be a wall of
+     * weight, while the Locks screen draws a handful of cards whose name is the row's subject. Had
+     * this changed [RowLabel] in place it would have silently restyled a screen feature 007 is not
+     * allowed to touch.
+     */
+    val RowTitle = TextStyle(
+        fontFamily = InstrumentSans,
+        fontWeight = FontWeight.Medium,
+        fontSize = 17.sp,
     )
 
     /** App-list row labels. */
@@ -132,6 +162,19 @@ object SlowLockType {
         letterSpacing = (-0.03).em,
     )
 
+    /**
+     * The delay badge's label on a Locks row: `10s`.
+     *
+     * Mono and Medium, because it is the number the row is *for* — the design's whole argument is
+     * that the delay is the product's central value, and this is the smallest place it says so
+     * (C6, 007 FR-015).
+     */
+    val Badge = TextStyle(
+        fontFamily = JetBrainsMono,
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+    )
+
     /** The `SECONDS` caption under the readout. */
     val Caption = TextStyle(
         fontFamily = JetBrainsMono,
@@ -152,6 +195,25 @@ object SlowLockType {
         fontFamily = JetBrainsMono,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
+    )
+
+    /**
+     * The count beneath the Locks title: `3 LOCKS`.
+     *
+     * Same family and size as [Eyebrow], different tracking — the artboard sets this line at
+     * 0.06em and the unsupported-launcher eyebrow at 0.14em, and a shared style would have to be
+     * wrong for one of them. Mono, because it leads with a number the user reads (C6).
+     *
+     * **The capitals live in the resource, not in a transform** (contract C8): `locks_count_caption`
+     * is drawn and `locks_count` is spoken. Uppercasing at display time is a locale trap and would
+     * take the decision away from the translator. The letter-spacing comes from here, never from
+     * spaces typed between the letters.
+     */
+    val Count = TextStyle(
+        fontFamily = JetBrainsMono,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        letterSpacing = 0.06.em,
     )
 
     /** The unsupported-launcher screen's `NO ROOM ON THE HOME SCREEN`. */

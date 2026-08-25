@@ -180,7 +180,12 @@
     <!--
         The Locks screen (005, FR-010) - what a returning user opens on.
     -->
-    <string name="locks_title">Your locks</string>
+    <!--
+        "Locks", not "Your locks", since 007 FR-007. The word is what the `New · Locks` artboard
+        draws, and at the redesigned title's size the possessive was doing no work: this screen is
+        only ever reached by the person whose locks they are.
+    -->
+    <string name="locks_title">Locks</string>
 
     <!--
         The count beneath the title (FR-011).
@@ -199,20 +204,41 @@
     </plurals>
 
     <!--
+        The SAME count, capitalised, as the Locks screen draws it (007 FR-008, contract L4).
+
+        A second resource rather than uppercase() at display time, because contract C8 forbids that
+        transform on user-visible text - see the note on delay_config_seconds_caption for the
+        Turkish dotted/dotless i trap it avoids. locks_count above is what a screen reader is given,
+        so TalkBack hears "3 locks" and is never handed capitals to spell out (007 FR-012).
+
+        Translators: capitalise this in your language only if your script has case and the
+        convention makes sense; otherwise render it exactly as locks_count. The letter-spacing the
+        design shows comes from the text style, never from spaces between the letters, which would
+        destroy the string for screen readers.
+    -->
+    <plurals name="locks_count_caption">
+        <item quantity="one">%1$d LOCK</item>
+        <item quantity="other">%1$d LOCKS</item>
+    </plurals>
+
+    <!--
         The screen's single action (FR-014). Stored with its "+" rather than composing one at
         display time, so a translator can move or drop it.
     -->
     <string name="locks_new">+ New lock</string>
 
     <!--
-        A row's second line: the delay and the icon treatment, joined (FR-010).
+        The delay badge at the trailing edge of a Locks row (007 FR-015).
 
-        %1$s is the delay (the delay_wait plural, reused - the same words the preview card shows,
-        so a lock reads the same before and after it is made) and %2$s the treatment (the existing
-        shortcut_treatment_* strings). The separator is a translatable part of the resource because
-        not every script wants a middle dot.
+        %1$d is the delay in seconds. Translatable, because "s" is not a universal abbreviation for
+        a second and some scripts put the unit on the other side of the number.
+
+        THIS IS THE FORM FOR THE EYE ONLY. It is deliberately terse, and a screen reader must never
+        be left with it - "10s" is read as "ten s". LocksScreen gives the badge a
+        contentDescription holding the delay_wait plural instead, so the row is spoken as
+        "10 second wait" (007 FR-018, contract L7).
     -->
-    <string name="locks_row_detail">%1$s · %2$s</string>
+    <string name="locks_delay_badge">%1$ds</string>
 
     <string name="locks_icon_description">%1$s icon</string>
 
