@@ -193,7 +193,7 @@
   .site-nav { gap: 28px; }
   .hero { padding: 48px 48px 96px; grid-template-columns: 1fr 412px; gap: 72px; }
   .hero-title { font-size: 68px; }
-  .phone { width: 412px; height: 820px; }
+  .phone { width: 412px; }
   .section-dark { padding: 96px 48px; }
   .steps { grid-template-columns: repeat(3, 1fr); }
   .section-why { padding: 96px 48px; }
@@ -210,7 +210,7 @@
     .site-nav { gap: 16px; row-gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .hero { padding: 20px 20px 56px; grid-template-columns: 1fr; gap: 40px; }
     .hero-title { font-size: clamp(40px, 10vw, 68px); }
-    .phone { width: 100%; max-width: 412px; height: auto; justify-self: center; }
+    .phone { width: 100%; max-width: 412px; justify-self: center; }
     .section-dark { padding: 56px 20px; }
     .steps { grid-template-columns: 1fr; }
     .section-why { padding: 56px 20px; }
@@ -263,39 +263,11 @@
           <div style="width:22px;height:11px;border-radius:3px;background:#17150F"></div>
         </div>
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;padding:12px 20px 20px;min-height:0">
-        <div style="display:flex;align-items:center;gap:12px;flex:none">
-          <div style="width:40px;height:40px;border-radius:12px;background:#FBF9F5;border:1px solid #E3DED3;display:flex;align-items:center;justify-content:center;flex:none">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#17150F"><path d="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"></path></svg>
-          </div>
-          <div style="flex:1;font-size:22px;font-weight:500;letter-spacing:-0.01em">Wait before opening</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:#6F6A5E;flex:none">2 / 3</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;min-height:0">
-          <div style="display:flex;align-items:center;gap:12px;background:#FBF9F5;border:1px solid #E3DED3;border-radius:999px;padding:8px 16px 8px 8px">
-            <div style="width:32px;height:32px;border-radius:10px;background:#E7E2D7"></div>
-            <div style="font-size:15px;font-weight:500">Messages</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:104px;line-height:1;font-weight:500;letter-spacing:-0.03em">10</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.2em;color:#6F6A5E">SECONDS</div>
-          </div>
-        </div>
-        <div style="flex:none;display:flex;flex-direction:column;gap:26px">
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="height:28px;display:flex;align-items:center;position:relative">
-              <div style="position:absolute;left:0;right:0;height:6px;border-radius:3px;background:#E4DFD4"></div>
-              <div style="position:absolute;left:0;width:31%;height:6px;border-radius:3px;background:#C9821F"></div>
-              <div style="position:absolute;left:31%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:#FBF9F5;border:3px solid #C9821F;box-sizing:border-box"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6F6A5E">
-              <span>1s</span>
-              <span>30s</span>
-            </div>
-          </div>
-          <div style="height:56px;border-radius:16px;background:#C9821F;color:#17150F;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">Choose the icon</div>
-        </div>
-      </div>
+      <img src="assets/hero-wait-screen.webp"
+           width="576" height="1194"
+           alt="SlowLock's wait screen: the Messages app selected, a 10-second wait, and a slider from 1 to 30 seconds."
+           decoding="async" fetchpriority="high"
+           style="display:block;width:100%;height:auto;background:#F3F0EA">
       <div style="height:26px;display:flex;align-items:center;justify-content:center;flex:none">
         <div style="width:108px;height:4px;border-radius:2px;background:#17150F;opacity:.4"></div>
       </div>
