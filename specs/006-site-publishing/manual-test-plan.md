@@ -155,9 +155,9 @@ Run on 2026-08-25 against `python3 -m http.server --directory site` (M1–M9) us
 | M9 | **PASS** | `grep -rn 'sc-camel\|style-hover\|data-screen-label\|x-dc\|helmet\|__bundler' site/` → no match; `grep -c '<script'` → `0`, `0`. |
 | M10 | **PASS** | `https://tberchanov.github.io/SlowLock/` and `/privacy.html` both return `200`. |
 | M11 | **PASS** | `curl -s …/privacy.html \| grep -c "collects nothing"` → `3`; no draft wording in the live page. Nothing outside `site/` is served: `/app/build.gradle.kts`, `/specs/`, `/LICENSE`, `/README.md` all `404` (FR-025). |
-| M12 | pending | Post-publish, maintainer's device. |
-| M13 | pending | Post-publish. |
-| M14 | pending | Post-publish. |
+| M12 | **pending** | Requires the maintainer's Android device over mobile data. |
+| M13 | **PASS** | Commit `8b423cc` touches only `specs/` and triggered **no** "Deploy site to Pages" run; the only three deploy runs are the three commits that touched `site/`. Probed with a `specs/`-only commit rather than an `app/`-only one — the `paths:` filter does not distinguish between them, and deliberately editing `app/` to revert it would have broken the T043 build gate. |
+| M14 | **PASS** | Probe `6787354` ("PROBE" appended to the "How it works" heading) pushed at 16:17:24 UTC, visible live at **16:17:41 — 17 s**. Revert `9442399` pushed 16:18:01, live 16:18:17 — 16 s. Live page confirmed clean afterwards (`grep -c PROBE` → 0). Both far inside the 5-minute budget (SC-007). |
 
 **Build gate**: `git status --short app/ gradle/` → empty; `./gradlew test assembleDebug` →
 `BUILD SUCCESSFUL`.

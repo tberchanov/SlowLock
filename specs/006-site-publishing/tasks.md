@@ -123,8 +123,8 @@ upload.
 - [X] T036 [US3] Set **Settings → Pages → Source: GitHub Actions** in the GitHub repository, then watch the "Deploy site to Pages" run complete in the Actions tab (research R1)
 - [X] T037 [US3] Run manual cases M10 and M11: both live addresses return `200`, and `curl -s https://tberchanov.github.io/SlowLock/privacy.html | grep -c "collects nothing"` returns ≥ 1 — this is what a Play reviewer's tooling sees (FR-001, FR-002, FR-006, SC-001)
 - [ ] T038 [US3] Run manual case M12: open both live addresses on a real Android device over mobile data, navigate between them, confirm no horizontal scrolling and each page readable within about 2 seconds (FR-007, SC-003, SC-008)
-- [ ] T039 [US3] Run manual case M14: change one visible word in `site/index.html`, push, and confirm the live page updates within 5 minutes; revert the probe afterwards (FR-023, SC-007)
-- [ ] T040 [US3] Run manual case M13: push a commit touching only files under `app/` and confirm no "Deploy site to Pages" run is triggered — this is what the `paths:` filter buys (FR-023, User Story 3 scenario 2)
+- [X] T039 [US3] Run manual case M14: change one visible word in `site/index.html`, push, and confirm the live page updates within 5 minutes; revert the probe afterwards (FR-023, SC-007)
+- [X] T040 [US3] Run manual case M13: push a commit touching only files under `app/` and confirm no "Deploy site to Pages" run is triggered — this is what the `paths:` filter buys (FR-023, User Story 3 scenario 2)
 
 **Checkpoint**: The site is live at its contracted addresses and the update loop is proven.
 
