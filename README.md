@@ -1,1 +1,5 @@
 # SlowLock
+
+## License
+
+[MIT](LICENSE)
