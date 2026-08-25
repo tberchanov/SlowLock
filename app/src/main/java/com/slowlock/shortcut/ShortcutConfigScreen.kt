@@ -66,10 +66,12 @@ import kotlinx.coroutines.launch
  * alone tells a screen-reader user nothing. `SelectableTile` re-supplies them through
  * `Modifier.selectable` with `Role.RadioButton` (FR-043, contract U4).
  *
- * **The `create` path is untouched** — resolve fresh, save, pin, then `onCreated`, in that order,
- * with the target re-resolved at the moment of the tap because it may have been uninstalled while
- * this screen was open (002, `contracts/screen-inventory.md` S3). So is `initialTreatment`, which
- * is the app's *saved* treatment loaded by the root, not a default.
+ * **The `create` path is untouched by 005** — resolve fresh, save, pin, then `onCreated`, in that
+ * order, with the target re-resolved at the moment of the tap because it may have been uninstalled
+ * while this screen was open (002, `contracts/screen-inventory.md` S3). Feature 005 briefly wrote a
+ * lock record here and then took it back out: a lock is its pinned shortcut (FR-003a), so `pin()`
+ * already creates it and there is nothing left for this screen to record. `initialTreatment` is
+ * untouched too — it is the app's *saved* treatment loaded by the root, not a default.
  *
  * The title reads "New lock" where the design source still reads "New shortcut": the terminology
  * decision post-dates the artboard, and this is a deliberate divergence, not drift (FR-041).
@@ -123,7 +125,13 @@ fun ShortcutConfigScreen(
                 .padding(contentPadding)
                 .padding(horizontal = SCREEN_PADDING),
         ) {
-            ScreenHeader(title = stringResource(R.string.shortcut_config_title), onBack = onBack)
+            // Step 3 of 3 (005 FR-029). The `BackHandler` this screen already had is what
+            // FR-030 asks for and is unchanged.
+            ScreenHeader(
+                title = stringResource(R.string.shortcut_config_title),
+                onBack = onBack,
+                step = 3,
+            )
 
             Box(
                 modifier = Modifier
@@ -202,12 +210,18 @@ fun ShortcutConfigScreen(
 }
 
 /**
- * Unchanged from feature 003, and deliberately so.
+ * Unchanged from feature 003, and deliberately so — feature 005 added a line here and then took
+ * it back out, once a lock stopped being a record and became the pinned shortcut itself.
  *
  * The order matters and is the contract: **re-resolve, then save, then pin.** The target may have
  * been uninstalled while this screen sat open, so the resolution at tap time is the one that
  * counts; and the configuration is written before the pin request goes out so that a launcher
  * which pins asynchronously can never fire the shortcut before its delay exists on disk.
+ *
+ * **Creating a lock is not a write** (FR-003a). A lock exists exactly when its shortcut is pinned,
+ * so `pin()` is what creates it — and only if the user accepts the launcher's dialog. Declining
+ * leaves nothing behind, which is the whole point: the app never has to guess at an outcome it is
+ * never told.
  */
 private suspend fun create(
     context: Context,

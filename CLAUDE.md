@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/004-visual-redesign/plan.md`
+`specs/005-locks-and-first-run/plan.md`
 <!-- SPECKIT END -->

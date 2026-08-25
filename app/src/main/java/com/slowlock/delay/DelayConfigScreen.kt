@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
@@ -97,46 +98,60 @@ fun DelayConfigScreen(
         value = iconCache.icon(resolved.packageName, resolved.versionCode)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = SCREEN_PADDING),
-    ) {
-        ScreenHeader(title = stringResource(R.string.delay_config_title), onBack = onBack)
-
-        // The flexible middle. Everything below it is fixed height, which is the whole mechanism
-        // behind FR-014a: there is no arrangement in which the action can be pushed off screen.
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { contentPadding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
+                .fillMaxSize()
+                // The system-bar inset, and the reason this screen is a `Scaffold` at all.
+                // Every other screen in the app takes its insets from one; this was the only
+                // one built on a bare `Column`, so its header drew under the status bar.
+                .padding(contentPadding)
+                .padding(horizontal = SCREEN_PADDING),
         ) {
-            when {
-                targetState is TargetState.Missing ->
-                    Message(stringResource(R.string.app_list_unavailable))
-                // Resolving: nothing, deliberately. A spinner for a package-manager lookup that
-                // takes milliseconds is a flash, not feedback (003).
-                target == null -> Unit
-                else -> AppPill(label = target.label, icon = icon)
-            }
-            Readout(seconds = seconds, modifier = Modifier.weight(1f, fill = false))
-        }
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(26.dp),
-        ) {
-            DelaySlider(seconds = seconds, onSecondsChange = onSecondsChange)
-            PresetRow(seconds = seconds, onSecondsChange = onSecondsChange)
-            PrimaryAction(
-                label = stringResource(R.string.delay_config_next),
-                onClick = onNext,
-                modifier = Modifier.padding(bottom = 20.dp),
+            // Step 2 of 3 (005 FR-029). The `BackHandler` this screen already had is what FR-030
+            // asks for and is unchanged.
+            ScreenHeader(
+                title = stringResource(R.string.delay_config_title),
+                onBack = onBack,
+                step = 2,
             )
+
+            // The flexible middle. Everything below it is fixed height, which is the whole mechanism
+            // behind FR-014a: there is no arrangement in which the action can be pushed off screen.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
+            ) {
+                when {
+                    targetState is TargetState.Missing ->
+                        Message(stringResource(R.string.app_list_unavailable))
+                    // Resolving: nothing, deliberately. A spinner for a package-manager lookup that
+                    // takes milliseconds is a flash, not feedback (003).
+                    target == null -> Unit
+                    else -> AppPill(label = target.label, icon = icon)
+                }
+                Readout(seconds = seconds, modifier = Modifier.weight(1f, fill = false))
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(26.dp),
+            ) {
+                DelaySlider(seconds = seconds, onSecondsChange = onSecondsChange)
+                PresetRow(seconds = seconds, onSecondsChange = onSecondsChange)
+                PrimaryAction(
+                    label = stringResource(R.string.delay_config_next),
+                    onClick = onNext,
+                    modifier = Modifier.padding(bottom = 20.dp),
+                )
+            }
         }
     }
 }

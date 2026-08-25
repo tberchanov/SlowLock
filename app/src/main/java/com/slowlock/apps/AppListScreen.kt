@@ -1,5 +1,6 @@
 package com.slowlock.apps
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,14 +61,20 @@ import com.slowlock.ui.theme.SlowLockType
  * the icon cache and the scroll position that survives a round trip through the delay and icon
  * screens are all untouched (`contracts/screen-inventory.md` S1).
  *
- * **No back control and no step counter**, though the design source draws both. This screen is
- * the app's root in Phase 1, so a back tile would duplicate the system gesture, and a `1 / 3`
- * counter would claim a wizard entered from a Locks screen that does not exist yet. Both arrive
- * in Phase 2 (spec **Out of Scope**, contract U1).
+ * **It now has a back control and a step counter**, which feature 004 drew and deferred. This
+ * screen stopped being the app's root when `Stage.Home` arrived: it is step 1 of a three-step
+ * flow entered from the Locks screen, so [onBack] has somewhere real to go and `1 / 3` is a
+ * claim the app can honour (005 FR-028, FR-029, contract K5).
+ *
+ * System back does exactly what the tile does, through a [BackHandler] — the same pattern the
+ * delay and icon screens already use, and what FR-030 asks for. Nothing else about this screen
+ * changed: not the view model, the enumeration, the query, the icon cache, the rows or the
+ * snackbar (005 N10).
  */
 @Composable
 fun AppListScreen(
     onAppSelected: (packageName: String) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppListViewModel = viewModel(),
 ) {
@@ -76,6 +83,10 @@ fun AppListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refresh() }
+
+    // FR-030: the system gesture and the on-screen tile are the same exit, so they call the same
+    // lambda rather than each arriving at the root by their own route.
+    BackHandler { onBack() }
 
     state.unavailableAppMessage?.let { message ->
         LaunchedEffect(message) {
@@ -96,7 +107,10 @@ fun AppListScreen(
         ) {
             ScreenHeader(
                 title = stringResource(R.string.app_list_title),
-                onBack = null,
+                onBack = onBack,
+                // Step 1 of 3 (FR-029). The screen does not know what the other two are, and
+                // does not need to — the "3" is a literal in the resource (research R7).
+                step = 1,
                 modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING),
             )
             if (!state.isLoading && state.apps.isNotEmpty()) {

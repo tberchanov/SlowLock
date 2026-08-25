@@ -157,4 +157,126 @@
     <string name="pin_unsupported_open_settings">Choose home screen app</string>
     <string name="pin_unsupported_recheck">Check again</string>
     <string name="pin_unsupported_settings_failed">That setting couldn\'t be opened on this device. You can change your home screen app from your phone\'s settings.</string>
+
+    <!--
+        The intro screen (005, FR-018) - what a fresh install opens on, and the only place the app
+        explains itself.
+
+        Stored capitalised because the capitalisation is stylistic (contract C8) - see the note on
+        delay_config_seconds_caption for why it is not uppercased at display time.
+    -->
+    <string name="intro_eyebrow">A PAUSE, NOT A BLOCK</string>
+
+    <string name="intro_title">Put a pause in front of an app</string>
+
+    <!--
+        FR-018, and a product commitment rather than copy: the second sentence is the app promising
+        what it will *not* do. Nothing is blocked - the app always opens - and nothing is counted:
+        statistics of any kind are permanently out of scope. Translations must keep both halves.
+    -->
+    <string name="intro_body">SlowLock puts a short wait in front of an app you open too easily. You choose the app and how long to wait, and SlowLock adds an icon to your home screen that waits before opening it.\n\nNothing is blocked, and nothing is counted. The app always opens, and SlowLock never tracks how often you use it.</string>
+
+    <string name="intro_start">Set up a lock</string>
+    <!--
+        The Locks screen (005, FR-010) - what a returning user opens on.
+    -->
+    <string name="locks_title">Your locks</string>
+
+    <!--
+        The count beneath the title (FR-011).
+
+        It states the number and NOTHING else. The design source reads "3 ON YOUR HOME SCREEN";
+        that half is deliberately not shipped, because Android cannot tell the app whether those
+        icons are still there and asserting it is exactly the claim Constitution I forbids. A user
+        who deleted an icon would be told it was still on their home screen.
+
+        A <plurals> rather than "%1$d locks": one lock is the commonest state this screen has, and
+        "1 locks" is one tap away from being read by every new user.
+    -->
+    <plurals name="locks_count">
+        <item quantity="one">%1$d lock</item>
+        <item quantity="other">%1$d locks</item>
+    </plurals>
+
+    <!--
+        The screen's single action (FR-014). Stored with its "+" rather than composing one at
+        display time, so a translator can move or drop it.
+    -->
+    <string name="locks_new">+ New lock</string>
+
+    <!--
+        A row's second line: the delay and the icon treatment, joined (FR-010).
+
+        %1$s is the delay (the delay_wait plural, reused - the same words the preview card shows,
+        so a lock reads the same before and after it is made) and %2$s the treatment (the existing
+        shortcut_treatment_* strings). The separator is a translatable part of the resource because
+        not every script wants a middle dot.
+    -->
+    <string name="locks_row_detail">%1$s · %2$s</string>
+
+    <string name="locks_icon_description">%1$s icon</string>
+
+    <!--
+        The unavailable row (FR-020, contract K3).
+
+        The app is gone but the lock is not, and this row says so with the only thing left to
+        identify it by: %1$s is the package name. It must not suggest the lock was removed - it
+        was not, and the icon on the home screen may still be sitting there waiting. Only the user
+        removes a lock.
+    -->
+    <string name="locks_unavailable">%1$s is no longer installed. Its lock stays until you remove it.</string>
+
+    <!--
+        Removal (005 US5, FR-021, FR-022, contract K4).
+
+        SlowLock CANNOT remove a lock. A lock is its pinned shortcut, Android offers no way to
+        unpin one, and the only place the action exists is the user's home screen. So this is not
+        a confirmation - there is nothing to confirm - it is an explanation, with one button.
+
+        This is the label of the long press and of the custom accessibility action that opens it.
+        It is phrased as a question rather than a command because choosing it performs nothing.
+    -->
+    <string name="locks_removal_action">How to remove this lock</string>
+
+    <!--
+        The visible control on an unavailable row (contract K3), which has no tap target for a long
+        press to attach to. Shorter than the action label because it sits inside a row.
+    -->
+    <string name="locks_removal_help">How to remove</string>
+
+    <string name="locks_removal_title">Removing a lock</string>
+
+    <!--
+        THE WORDING IS THE DELIVERABLE (FR-022, SC-012, Constitution I). Read the constraints before
+        touching or translating this string:
+
+        - It MUST name the app (%1$s), so the user can tell which icon to look for.
+        - It MUST say that removing the icon is what removes the lock, and that the user does it on
+          their home screen. This is the whole content of the dialog.
+        - It MUST NOT imply SlowLock can remove the icon, or that anything happens when this dialog
+          is dismissed. Nothing does - there is one button and it closes the dialog.
+        - It MUST NOT suggest the app is uninstalled. It is not, and the last sentence says so
+          because "remove" next to an app name reads as "uninstall" to plenty of people.
+    -->
+    <string name="locks_removal_body">The lock for %1$s disappears from this list when you remove its icon from your home screen.\n\nPress and hold the icon, then drag it away or choose Remove. This does not uninstall the app.</string>
+
+    <string name="locks_removal_dismiss">OK</string>
+    <!--
+        The wizard's step counter (FR-029, contract K5, research R7).
+
+        The "3" is a literal in the resource, never a computed stage count: the flow has three
+        steps because the design says it has three, not because the app happens to hold three
+        stages, and a translator moving the separator must be able to see both numbers.
+        %1$d is the current step. Mono, so the two numerals do not shift width between steps.
+    -->
+    <string name="step_counter">%1$d / 3</string>
+
+    <!--
+        What the counter is announced as, merged into the header's title so a screen reader hears
+        "Choose an app, step 1 of 3" rather than the title and a bare "1 / 3" as two separate
+        stops. The visible form above is glanceable; this one is a sentence, which is why the two
+        cannot be the same resource. It is not a control and has no action.
+    -->
+    <string name="step_counter_description">step %1$d of 3</string>
+
 </resources>
