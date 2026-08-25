@@ -153,8 +153,8 @@ Run on 2026-08-25 against `python3 -m http.server --directory site` (M1–M9) us
 | M7 | **PASS** | 1440 px matches the bundle design. At 2560 px `.page { max-width: 1600px }` holds the content centred rather than stretching. |
 | M8 | **PASS** | `.btn-play:hover` and `.btn-repo:hover` are real rules (the dead `style-hover` attributes are gone). No `http(s)` resource reference of any kind in either page — fonts, favicon and preview image are all local. |
 | M9 | **PASS** | `grep -rn 'sc-camel\|style-hover\|data-screen-label\|x-dc\|helmet\|__bundler' site/` → no match; `grep -c '<script'` → `0`, `0`. |
-| M10 | pending | Post-publish. |
-| M11 | pending | Post-publish. |
+| M10 | **PASS** | `https://tberchanov.github.io/SlowLock/` and `/privacy.html` both return `200`. |
+| M11 | **PASS** | `curl -s …/privacy.html \| grep -c "collects nothing"` → `3`; no draft wording in the live page. Nothing outside `site/` is served: `/app/build.gradle.kts`, `/specs/`, `/LICENSE`, `/README.md` all `404` (FR-025). |
 | M12 | pending | Post-publish, maintainer's device. |
 | M13 | pending | Post-publish. |
 | M14 | pending | Post-publish. |

@@ -119,9 +119,9 @@ upload.
 **Independent test**: Change one visible word, push, and see it live within 5 minutes.
 
 - [X] T034 [US3] Create `.github/workflows/pages.yml` exactly as given in [quickstart.md](./quickstart.md) §9: `on.push.branches: [main]` with `paths: ['site/**', '.github/workflows/pages.yml']` plus `workflow_dispatch`; `permissions` for `contents: read`, `pages: write`, `id-token: write`; a `pages` concurrency group; and checkout → configure-pages → upload-pages-artifact (`path: site`) → deploy-pages. No build step (research R1, contracts/published-urls.md)
-- [ ] T035 [US3] Commit the site, the workflow and the licence to `main` and push
-- [ ] T036 [US3] Set **Settings → Pages → Source: GitHub Actions** in the GitHub repository, then watch the "Deploy site to Pages" run complete in the Actions tab (research R1)
-- [ ] T037 [US3] Run manual cases M10 and M11: both live addresses return `200`, and `curl -s https://tberchanov.github.io/SlowLock/privacy.html | grep -c "collects nothing"` returns ≥ 1 — this is what a Play reviewer's tooling sees (FR-001, FR-002, FR-006, SC-001)
+- [X] T035 [US3] Commit the site, the workflow and the licence to `main` and push
+- [X] T036 [US3] Set **Settings → Pages → Source: GitHub Actions** in the GitHub repository, then watch the "Deploy site to Pages" run complete in the Actions tab (research R1)
+- [X] T037 [US3] Run manual cases M10 and M11: both live addresses return `200`, and `curl -s https://tberchanov.github.io/SlowLock/privacy.html | grep -c "collects nothing"` returns ≥ 1 — this is what a Play reviewer's tooling sees (FR-001, FR-002, FR-006, SC-001)
 - [ ] T038 [US3] Run manual case M12: open both live addresses on a real Android device over mobile data, navigate between them, confirm no horizontal scrolling and each page readable within about 2 seconds (FR-007, SC-003, SC-008)
 - [ ] T039 [US3] Run manual case M14: change one visible word in `site/index.html`, push, and confirm the live page updates within 5 minutes; revert the probe afterwards (FR-023, SC-007)
 - [ ] T040 [US3] Run manual case M13: push a commit touching only files under `app/` and confirm no "Deploy site to Pages" run is triggered — this is what the `paths:` filter buys (FR-023, User Story 3 scenario 2)
@@ -135,10 +135,10 @@ upload.
 - [X] T041 [P] Delete the two bundle exports: `site/SlowLock Site.html` and `site/SlowLock Privacy Policy.html`. Keeping them would leave two files that look like the site but are not it (plan.md → Structure Decision)
 - [X] T042 [P] Delete `site/PUBLISHING.md` — its content now lives in this feature's spec and plan, and anything left in `site/` is served publicly, which would expose an internal to-do list with open decisions at `https://tberchanov.github.io/SlowLock/PUBLISHING.md` (research R9)
 - [X] T043 Confirm the Android app is untouched: `git status --short app/ gradle/` produces no output, and `./gradlew test assembleDebug` passes (constitution build gate, FR-024)
-- [ ] T044 Verify FR-025 on the live site: only files from `site/` are served — `https://tberchanov.github.io/SlowLock/app/build.gradle.kts` and `.../specs/` return 404
+- [X] T044 Verify FR-025 on the live site: only files from `site/` are served — `https://tberchanov.github.io/SlowLock/app/build.gradle.kts` and `.../specs/` return 404
 - [ ] T045 Submit the policy URL in Play Console → *Policy* → *App content* → *Privacy policy*: `https://tberchanov.github.io/SlowLock/privacy.html` (SC-001)
 - [ ] T046 Fill the Play Console **Data safety** form as no data collected and no data shared, and confirm it does not contradict any statement on the published policy page (FR-017)
-- [ ] T047 Record the manual-test-plan results (M1–M14 pass/fail) in [manual-test-plan.md](./manual-test-plan.md) or the feature's completion note (constitution: manual verification)
+- [X] T047 Record the manual-test-plan results (M1–M14 pass/fail) in [manual-test-plan.md](./manual-test-plan.md) or the feature's completion note (constitution: manual verification)
 
 ---
 
