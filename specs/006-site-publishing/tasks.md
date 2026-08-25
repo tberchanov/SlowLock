@@ -136,8 +136,13 @@ upload.
 - [X] T042 [P] Delete `site/PUBLISHING.md` — its content now lives in this feature's spec and plan, and anything left in `site/` is served publicly, which would expose an internal to-do list with open decisions at `https://tberchanov.github.io/SlowLock/PUBLISHING.md` (research R9)
 - [X] T043 Confirm the Android app is untouched: `git status --short app/ gradle/` produces no output, and `./gradlew test assembleDebug` passes (constitution build gate, FR-024)
 - [X] T044 Verify FR-025 on the live site: only files from `site/` are served — `https://tberchanov.github.io/SlowLock/app/build.gradle.kts` and `.../specs/` return 404
-- [ ] T045 Submit the policy URL in Play Console → *Policy* → *App content* → *Privacy policy*: `https://tberchanov.github.io/SlowLock/privacy.html` (SC-001)
-- [ ] T046 Fill the Play Console **Data safety** form as no data collected and no data shared, and confirm it does not contradict any statement on the published policy page (FR-017)
+
+> **Play Console submission is out of scope for this feature.** Submitting the policy URL and
+> filling the Data safety form (formerly T045 and T046) are the maintainer's to do later; the
+> URL they need is fixed by [contracts/published-urls.md](./contracts/published-urls.md) and is
+> already live. FR-017 (page and Data safety form must not contradict each other) is deferred
+> with them.
+
 - [X] T047 Record the manual-test-plan results (M1–M14 pass/fail) in [manual-test-plan.md](./manual-test-plan.md) or the feature's completion note (constitution: manual verification)
 
 ---
@@ -194,8 +199,8 @@ Play release. Everything after it improves the site rather than unblocking the a
 
 **Increment 2**: Phase 4 (US2) — the landing page and the licence.
 
-**Increment 3**: Phases 5 and 6 — prove the update loop, delete the bundles and the working note,
-submit to Play.
+**Increment 3**: Phases 5 and 6 — prove the update loop, delete the bundles and the working note.
+Play Console submission is out of scope; see the note in Phase 6.
 
 **One input still open**: the MIT copyright holder line in T030. It defaults to `tberchanov` and
 blocks nothing; supply a name and it is a one-line edit.
