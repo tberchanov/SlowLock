@@ -10,3 +10,8 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+# ShortcutLaunchActivity's fully-qualified name is written into the persisted intent of every
+# pinned shortcut already sitting on a user's home screen (contracts/pinned-shortcut.md), so it
+# is FROZEN and R8 must not rename it. ShortcutContractTest already fails the build if the class
+# moves in source; this is the same obligation enforced against the shrinker.
+-keepnames class com.slowlock.shortcut.ShortcutLaunchActivity

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.os.Process
+import com.slowlock.compat.packageVersionCode
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,16 +57,7 @@ class InstalledAppsSource(private val context: Context) {
         private val cache = HashMap<String, Long>()
 
         fun of(packageName: String): Long = cache.getOrPut(packageName) {
-            runCatching {
-                packageManager
-                    .getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-                    .longVersionCode
-            }.getOrDefault(UNKNOWN_VERSION)
+            packageVersionCode(packageManager, packageName)
         }
-    }
-
-    private companion object {
-        /** A package that vanished mid-enumeration still gets a usable, stable cache key. */
-        const val UNKNOWN_VERSION = 0L
     }
 }

@@ -10,10 +10,22 @@
         </intent>
     </queries>
 
+    <!--
+        Backup is OFF, deliberately, and both attributes below say so because they cover
+        different transports: allowBackup governs cloud backup (and the pre-31 path), while
+        dataExtractionRules governs Android 12+ cloud backup and device-to-device transfer.
+        Turning off only the first would still let a device transfer carry the data across.
+
+        The reason is that SlowLock's stored state is not portable. A lock exists exactly when
+        its shortcut is pinned (FR-003a), the pinned shortcuts live in the launcher and do not
+        travel with a backup, and LockStore's list is only the ORDER those rows were last seen
+        in. Restoring that list onto a new phone would seed the Locks screen from a launcher
+        that holds none of the shortcuts it describes. There is nothing here worth carrying and
+        a restore is strictly worse than a fresh start.
+    -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

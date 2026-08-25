@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.os.Process
+import com.slowlock.compat.packageVersionCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -93,15 +94,6 @@ suspend fun resolveShortcutTarget(
                     .minOfOrNull { activity -> activity.label.toString() }
             }.getOrNull()
         },
-        loadVersionCode = {
-            runCatching {
-                packageManager
-                    .getPackageInfo(it, PackageManager.PackageInfoFlags.of(0))
-                    .longVersionCode
-            }.getOrDefault(UNKNOWN_VERSION)
-        },
+        loadVersionCode = { packageVersionCode(packageManager, it) },
     )
 }
-
-/** A package that vanished mid-resolution still gets a usable, stable cache key. */
-private const val UNKNOWN_VERSION = 0L

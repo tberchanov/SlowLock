@@ -39,3 +39,6 @@ google-services.json
 
 # OS files
 .DS_Store
+
+# Release signing (never commit)
+keystore.properties

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        The API 29+ override of Theme.SlowLock.Wait, and the ONLY difference is the parent.
+
+        android:Theme.DeviceDefault.DayNight arrived in API 29. The base definition in
+        values/themes.xml uses the plain DeviceDefault so the app can run on API 26; from 29 up,
+        this one takes over and the system chrome around the wait screen's STARTING window
+        follows the device's light/dark setting (manual case M4.9).
+
+        Everything else is deliberately repeated rather than inherited: a style in a qualified
+        folder REPLACES the unqualified one outright, it does not merge with it, so the two
+        window attributes have to be restated here or the wait screen would grow an action bar
+        on exactly the devices most people are running.
+    -->
+    <style name="Theme.SlowLock.Wait" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/wait_background</item>
+    </style>
+</resources>

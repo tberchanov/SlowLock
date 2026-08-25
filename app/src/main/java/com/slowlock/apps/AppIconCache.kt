@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.LauncherApps
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Process
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
@@ -81,9 +82,25 @@ class AppIconCache(private val context: Context) {
     private fun writeToDisk(file: File, bitmap: Bitmap) {
         runCatching {
             iconDir.mkdirs()
-            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it) }
+            file.outputStream().use { bitmap.compress(webpFormat(), 100, it) }
         }
     }
+
+    /**
+     * The WEBP flavour this platform has.
+     *
+     * `WEBP_LOSSLESS` is API 30. Below it the only WEBP constant is the now-deprecated `WEBP`,
+     * which at quality 100 encodes losslessly anyway — so the file on disk and the `.webp`
+     * name [fileNameFor] gives it stay correct on every supported level, and the branch is
+     * about which constant exists rather than about what gets written.
+     */
+    private fun webpFormat(): Bitmap.CompressFormat =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Bitmap.CompressFormat.WEBP_LOSSLESS
+        } else {
+            @Suppress("DEPRECATION")
+            Bitmap.CompressFormat.WEBP
+        }
 
     private fun rasterize(packageName: String): Bitmap? = runCatching {
         launcherApps.getActivityList(packageName, Process.myUserHandle())

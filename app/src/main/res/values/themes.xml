@@ -28,6 +28,13 @@
         (manual case M4.9). @color/wait_background itself resolves through values-night on its
         own, by configuration, whatever the parent is.
 
+        The DayNight parent lives in values-v29 (see values-v29/themes.xml): the platform gained
+        android:Theme.DeviceDefault.DayNight in API 29, and this app now supports 26. Below 29
+        the parent here is the plain DeviceDefault, which is the closest the platform has. The
+        windowBackground is the same resource either way and still resolves through values-night
+        by configuration, so the wait screen itself is correct on every level - only the system
+        chrome around the starting window is fixed rather than following the device on 26-28.
+
         The parent is android:Theme.DeviceDefault.DayNight rather than the
         android:Theme.Material.DayNight.NoActionBar named in tasks.md T013: the platform ships
         no Material DayNight variant at all (Theme.Material is Light or dark, never both), and
@@ -38,7 +45,7 @@
         android:windowDisablePreview is deliberately NOT carried over: the wait screen wants a
         starting window, where the invisible activity wanted none.
     -->
-    <style name="Theme.SlowLock.Wait" parent="android:Theme.DeviceDefault.DayNight">
+    <style name="Theme.SlowLock.Wait" parent="android:Theme.DeviceDefault">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@color/wait_background</item>
