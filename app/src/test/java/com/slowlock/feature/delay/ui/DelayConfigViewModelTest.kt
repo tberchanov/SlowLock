@@ -8,6 +8,7 @@ import com.slowlock.core.domain.AppTargetRepository
 import com.slowlock.core.domain.DelayConfig
 import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.core.domain.IconTreatment
+import com.slowlock.feature.delay.domain.LoadDelayConfigUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -106,7 +107,7 @@ class DelayConfigViewModelTest {
     private fun viewModel(savedState: SavedStateHandle, saved: DelayConfig) = DelayConfigViewModel(
         targets = FakeTargets,
         icons = FakeIcons,
-        config = FakeConfig(saved),
+        loadDelayConfig = LoadDelayConfigUseCase(FakeConfig(saved)),
         savedState = savedState,
     )
 

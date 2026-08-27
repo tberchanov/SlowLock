@@ -6,13 +6,9 @@ import android.content.pm.PackageManager
 import android.os.Process
 import com.slowlock.feature.apps.domain.InstalledApp
 import com.slowlock.feature.apps.domain.InstalledAppsRepository
-import com.slowlock.feature.apps.domain.dedupeByPackage
-import com.slowlock.feature.apps.domain.excludeSelf
-import com.slowlock.feature.apps.domain.sortedByLabel
 import com.slowlock.core.data.packageVersionCode
 import com.slowlock.core.domain.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -20,8 +16,10 @@ import kotlinx.coroutines.withContext
 
 /**
  * Reads the launchable apps on the current user profile — the boundary where `LauncherApps` output
- * becomes plain [InstalledApp] values, which leaves dedup, sorting and filtering as pure functions
- * testable without a device. `LauncherApps` needs no permission and shows no dialog (FR-015).
+ * becomes plain [InstalledApp] values, and nothing more. Which of them the picker shows, and in what
+ * order, is [com.slowlock.feature.apps.domain.LoadInstalledAppsUseCase]'s.
+ *
+ * `LauncherApps` needs no permission and shows no dialog (FR-015).
  */
 @Singleton
 class InstalledAppsSource @Inject constructor(
@@ -33,9 +31,8 @@ class InstalledAppsSource @Inject constructor(
         context.getSystemService(LauncherApps::class.java)
 
     /**
-     * Enumerates, excludes SlowLock, deduplicates and sorts, in that order, off the injected
-     * dispatcher (FR-011). The locale is read at load time rather than cached, so a language change
-     * re-collates the list on the next [load] (FR-005).
+     * Enumerates off the injected dispatcher (FR-011). One entry per launcher *activity*, this app
+     * included, in whatever order the platform answered — the caller narrows and collates.
      */
     override suspend fun load(): List<InstalledApp> = withContext(io) {
         val versionCodes = VersionCodeLookup(context.packageManager)
@@ -48,13 +45,7 @@ class InstalledAppsSource @Inject constructor(
                     versionCode = versionCodes.of(packageName),
                 )
             }
-            .excludeSelf(context.packageName)
-            .dedupeByPackage()
-            .sortedByLabel(currentLocale())
     }
-
-    private fun currentLocale(): Locale =
-        context.resources.configuration.locales.get(0) ?: Locale.getDefault()
 
     /**
      * Memoizes the per-package version lookup, so a package exposing several launcher activities

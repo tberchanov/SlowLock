@@ -19,12 +19,8 @@ interface LockOrderRepository {
     suspend fun loadOrder(): List<String>
 
     /**
-     * The lock list for [pinned], keeping the stored order in step with it. Writes back only when
-     * the order actually changed, so an ordinary visit costs a read and no write.
-     *
-     * **Never call this with an empty set standing in for "could not ask"** — an empty set claims
-     * the launcher holds no shortcuts at all, and acting on it would empty the screen.
-     * [PinnedShortcutsRepository.pinnedIds] answers `null` for that.
+     * Replaces the stored order. Whether the order needed replacing is [LoadLocksUseCase]'s
+     * decision; this only writes what it is given.
      */
-    suspend fun deriveOrder(pinned: Set<String>): List<String>
+    suspend fun saveOrder(order: List<String>)
 }

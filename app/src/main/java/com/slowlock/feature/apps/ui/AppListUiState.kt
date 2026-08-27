@@ -3,29 +3,39 @@ package com.slowlock.feature.apps.ui
 import com.slowlock.feature.apps.domain.InstalledApp
 
 /**
- * What the screen is currently showing, plus the query. [apps] and [query] are the single source of
- * truth; the visible list and the four display states are derived so they cannot contradict it.
+ * What the holder stores: the two values everything else is derived from, plus whether the first
+ * read has returned.
  *
- * Every field here is state that persists. The "this app is gone" message is not — it travels on
- * [AppListViewModel.messages], because a one-shot event held in an observable field is a sentinel
- * someone has to remember to clear (FR-038).
+ * Separate from [AppListUiState] so the narrowed list cannot be stored beside the values it is
+ * narrowed from and drift out of step with them (Constitution V). Nothing outside
+ * [AppListViewModel] sees this type.
  */
-data class AppListUiState(
+data class AppListInputs(
     val isLoading: Boolean = true,
     /** Full, sorted, deduplicated, self excluded. */
     val apps: List<InstalledApp> = emptyList(),
     val query: String = "",
+)
+
+/**
+ * What the screen is currently showing.
+ *
+ * Every field is derived from [AppListInputs] each time this is built, which is why there is no
+ * default for [visibleApps]: constructing one without its filter applied would be a state that
+ * contradicts itself.
+ *
+ * The "this app is gone" message is not here — it travels on [AppListViewModel.messages], because a
+ * one-shot event held in an observable field is a sentinel someone has to remember to clear
+ * (FR-038).
+ */
+data class AppListUiState(
+    val isLoading: Boolean,
+    /** Full, sorted, deduplicated, self excluded. */
+    val apps: List<InstalledApp>,
+    val query: String,
+    /** [apps] narrowed by [query]. Which entries survive is `FilterAppsUseCase`'s (FR-007). */
+    val visibleApps: List<InstalledApp>,
 ) {
-    /**
-     * The rows to render: [apps] narrowed to labels containing [query], ignoring case (FR-007).
-     * Substring, not prefix — "tagram" finds Instagram.
-     *
-     * The filter walks the already-collated list and never re-sorts, so clearing the query restores
-     * the original order for free (FR-008). At ~150 entries in memory it is sub-millisecond, which
-     * is why there is no debounce.
-     */
-    val visibleApps: List<InstalledApp>
-        get() = if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
 
     val isEmpty: Boolean
         get() = !isLoading && apps.isEmpty()

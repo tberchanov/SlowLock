@@ -4,7 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.slowlock.R
-import com.slowlock.feature.apps.domain.InstalledAppsRepository
+import com.slowlock.feature.apps.domain.FilterAppsUseCase
+import com.slowlock.feature.apps.domain.InstalledApp
+import com.slowlock.feature.apps.domain.LoadInstalledAppsUseCase
 import com.slowlock.feature.apps.domain.iconCacheKey
 import com.slowlock.core.domain.AppIconRepository
 import com.slowlock.core.domain.AppTargetRepository
@@ -15,7 +17,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -27,7 +32,8 @@ import kotlinx.coroutines.launch
  */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
-    private val apps: InstalledAppsRepository,
+    private val loadInstalledApps: LoadInstalledAppsUseCase,
+    private val filterApps: FilterAppsUseCase,
     private val targets: AppTargetRepository,
     /**
      * Exposed so each row loads its own icon lazily as it scrolls into view, and so [refresh] does
@@ -38,8 +44,21 @@ class AppListViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AppListUiState(query = savedState[QUERY_KEY] ?: ""))
-    val uiState: StateFlow<AppListUiState> = _uiState.asStateFlow()
+    private val _inputs = MutableStateFlow(AppListInputs(query = savedState[QUERY_KEY] ?: ""))
+
+    /**
+     * Derived from [_inputs] rather than stored beside them, so the narrowed list is rebuilt with
+     * every state it appears in and cannot drift from the two values it is narrowed from
+     * (Constitution V).
+     *
+     * `Eagerly` rather than `WhileSubscribed`: the upstream is a hot [MutableStateFlow] and the
+     * mapping is an in-memory filter, so there is no upstream work to stop and restart and no
+     * timeout worth choosing. The initial value is the *rendered* initial input, so a query
+     * restored from the handle is present before anything collects.
+     */
+    val uiState: StateFlow<AppListUiState> = _inputs
+        .map { it.rendered() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, _inputs.value.rendered())
 
     private val _messages = Channel<Int>(Channel.BUFFERED)
 
@@ -67,21 +86,21 @@ class AppListViewModel @Inject constructor(
      */
     fun refresh() {
         viewModelScope.launch {
-            val loaded = apps.load()
-            _uiState.update { it.copy(isLoading = false, apps = loaded) }
+            val loaded = loadInstalledApps()
+            _inputs.update { it.copy(isLoading = false, apps = loaded) }
             icons.sweep(loaded.map { iconCacheKey(it.packageName, it.versionCode) })
         }
     }
 
     /**
-     * Records the query; the filtering itself is derived in [AppListUiState.visibleApps]. Mirrored
-     * into [SavedStateHandle] so it survives process death within one visit; the handle belongs to
-     * this screen's back stack entry, so leaving the list for good takes the query with it
-     * (FR-002(a), obligation G5).
+     * Records the query; which rows survive it is [FilterAppsUseCase]'s. Mirrored into
+     * [SavedStateHandle] so it survives process death within one visit; the handle belongs to this
+     * screen's back stack entry, so leaving the list for good takes the query with it (FR-002(a),
+     * obligation G5).
      */
     fun onQueryChanged(query: String) {
         savedState[QUERY_KEY] = query
-        _uiState.update { it.copy(query = query) }
+        _inputs.update { it.copy(query = query) }
     }
 
     /**
@@ -102,12 +121,16 @@ class AppListViewModel @Inject constructor(
                 return@launch
             }
             // The list mutation is state and stays in state; only the message is an event.
-            _uiState.update { state ->
-                state.copy(apps = state.apps.filterNot { it.packageName == packageName })
+            _inputs.update { inputs ->
+                inputs.copy(apps = inputs.apps.filterNot { it.packageName == packageName })
             }
             _messages.send(R.string.app_list_unavailable)
         }
     }
+
+    /** The one place the screen's state is built, which is what keeps its parts consistent. */
+    private fun AppListInputs.rendered() =
+        AppListUiState(isLoading, apps, query, filterApps(apps, query))
 
     private companion object {
         const val QUERY_KEY = "query"

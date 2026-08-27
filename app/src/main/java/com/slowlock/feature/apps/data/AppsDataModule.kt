@@ -14,8 +14,7 @@ abstract class AppsDataModule {
 
     /**
      * `@Singleton` because the implementation holds a cached `LauncherApps` handle. The list it
-     * returns is not cached — every `load()` re-enumerates and re-collates under the current
-     * locale.
+     * returns is not cached — every `load()` re-enumerates.
      */
     @Binds
     @Singleton

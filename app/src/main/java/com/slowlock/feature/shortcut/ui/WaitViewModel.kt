@@ -3,11 +3,9 @@ package com.slowlock.feature.shortcut.ui
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.slowlock.core.domain.AppTargetRepository
-import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.feature.shortcut.domain.ElapsedClock
-import com.slowlock.feature.shortcut.domain.deadlineFrom
-import com.slowlock.feature.shortcut.domain.remainingMillis
+import com.slowlock.feature.shortcut.domain.WaitDecision
+import com.slowlock.feature.shortcut.domain.WaitDecisionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -18,12 +16,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 /**
- * Resolve, read, wait, decide — the delay behaviour behind the wait screen (FR-022, research R10).
+ * The wait screen's lifetime: what is remembered across a rotation and a process death, and what
+ * suspends until the hand-off is due.
  *
- * Four rules it must preserve:
+ * Three rules it must preserve, all of them about *this screen* rather than about the delay:
  *
- * - The anchor is taken before anything is read (W3), so neither the package-manager lookup nor the
- *   configuration read can push the hand-off later than the delay the user chose.
  * - A rotation must not restart the wait (W4, FR-027). The coroutine lives in `viewModelScope`,
  *   which survives a rotation, so there is nothing to restore because nothing was torn down; the
  *   deadline in [SavedStateHandle] covers process death.
@@ -31,13 +28,18 @@ import kotlinx.coroutines.launch
  *   changing, and finishing clears this holder, cancelling the `delay` in flight.
  * - A second tap of the same target changes nothing (W22); a different target re-anchors (W23).
  *
- * Not here: the `STARTED` race guard and the launch itself, which need the activity's own lifecycle
- * and a platform `Intent`. This holder decides *that* the hand-off is due; the window performs it.
+ * What a wait *owes* — resolve first, establish the deadline once, measure what is left — is
+ * [WaitDecisionUseCase]'s. The anchor is still taken here, and before the call (W3), so neither the
+ * package-manager lookup nor the configuration read can push the hand-off later than the delay the
+ * user chose.
+ *
+ * Not here either: the `STARTED` race guard and the launch itself, which need the activity's own
+ * lifecycle and a platform `Intent`. This holder learns *that* the hand-off is due; the window
+ * performs it.
  */
 @HiltViewModel
 class WaitViewModel @Inject constructor(
-    private val targets: AppTargetRepository,
-    private val config: DelayConfigRepository,
+    private val waitDecision: WaitDecisionUseCase,
     private val clock: ElapsedClock,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
@@ -86,25 +88,22 @@ class WaitViewModel @Inject constructor(
     }
 
     private suspend fun run(target: String) {
-        // W5: resolve before waiting. Never make someone sit through a delay for an app that was
-        // already gone when they tapped.
-        if (targets.resolve(target) == null) {
-            _events.send(WaitEvent.Unavailable)
-            return
-        }
-
-        // W6, W7: the delay comes off disk underneath the visible screen. There is no
-        // "unconfigured" branch — `load` answers with the default, which is the whole of FR-032.
         val anchor = savedState.get<Long>(KEY_ANCHOR) ?: clock.nowMillis()
-        val deadline = savedState.get<Long>(KEY_DEADLINE)
-            ?: deadlineFrom(anchor, config.load(target).delaySeconds)
-                .also { savedState[KEY_DEADLINE] = it }
 
-        delay(remainingMillis(deadline, clock.nowMillis()))
+        when (val decision = waitDecision(target, anchor, savedState.get<Long>(KEY_DEADLINE))) {
+            WaitDecision.Unavailable -> _events.send(WaitEvent.Unavailable)
 
-        // The hand-off is due; whether it happens is not decided here. The window re-resolves,
-        // checks it is still visible, and starts the target.
-        _events.send(WaitEvent.HandOff(target))
+            is WaitDecision.Wait -> {
+                // Stored here rather than by the use case: surviving process death is this screen's
+                // concern, and the handle is this screen's to write.
+                savedState[KEY_DEADLINE] = decision.deadlineMillis
+                delay(decision.remainingMillis)
+
+                // The hand-off is due; whether it happens is not decided here. The window
+                // re-resolves, checks it is still visible, and starts the target.
+                _events.send(WaitEvent.HandOff(target))
+            }
+        }
     }
 
     private companion object {

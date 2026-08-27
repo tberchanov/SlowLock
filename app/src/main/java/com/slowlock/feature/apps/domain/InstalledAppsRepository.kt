@@ -6,15 +6,16 @@ package com.slowlock.feature.apps.domain
  *
  * Obligations:
  *
- * - Excludes SlowLock itself, deduplicates by package, and sorts by label under the **current**
- *   locale read at load time — not a cached one, so a language change re-collates the list on the
- *   next load.
+ * - **Returns the raw enumeration**: one entry per launcher activity, this app included, in
+ *   whatever order the platform answered. Excluding, deduplicating and collating belong to
+ *   [LoadInstalledAppsUseCase], because they are rules a requirement states rather than how the
+ *   platform is read.
  * - Uses `LauncherApps`: no permission, no dialog, and never `QUERY_ALL_PACKAGES`
  *   (constitution, Permission and policy minimalism).
  * - Main-safe (O2); enumeration runs off the main thread.
  */
 interface InstalledAppsRepository {
 
-    /** Every launchable app, already excluded, deduplicated and collated. */
+    /** Every launchable activity on the current profile, unfiltered and unordered. */
     suspend fun load(): List<InstalledApp>
 }

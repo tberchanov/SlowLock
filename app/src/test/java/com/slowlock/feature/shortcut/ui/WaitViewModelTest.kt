@@ -7,6 +7,7 @@ import com.slowlock.core.domain.DelayConfig
 import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.core.domain.IconTreatment
 import com.slowlock.feature.shortcut.domain.ElapsedClock
+import com.slowlock.feature.shortcut.domain.WaitDecisionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -159,8 +160,14 @@ class WaitViewModelTest {
         delaySeconds: Int,
         resolves: Boolean = true,
     ) = WaitViewModel(
-        targets = FakeTargets(resolves),
-        config = FakeConfig(delaySeconds),
+        // The real decision runs over fake sources: what these cases assert is that the screen
+        // withholds the hand-off over time and remembers a deadline across a new holder, which
+        // substituting the decision would assert away.
+        waitDecision = WaitDecisionUseCase(
+            targets = FakeTargets(resolves),
+            config = FakeConfig(delaySeconds),
+            clock = ElapsedClock { currentTime },
+        ),
         // Virtual time is the elapsed-realtime clock here, so the deadline arithmetic and
         // `advanceTimeBy` talk about the same milliseconds.
         clock = ElapsedClock { currentTime },

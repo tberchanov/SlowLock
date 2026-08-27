@@ -45,7 +45,7 @@ val Lock.isAvailable: Boolean get() = label != null
  * Turns the recorded package names into rows, in one pass (FR-040).
  *
  * A free suspend function taking its two lookups as lambdas, which is what lets
- * `LocksViewModelTest` drive the null-resolution path without a device or an instrumented suite.
+ * `LoadLocksUseCaseTest` drive the null-resolution path without a device or an instrumented suite.
  *
  * It names no dispatcher: both lookups are repository calls and already main-safe (O2), so a
  * `withContext` here would be a second opinion about where work belongs (D1, D2).

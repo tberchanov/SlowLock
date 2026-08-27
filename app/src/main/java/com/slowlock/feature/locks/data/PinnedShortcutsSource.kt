@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
  * Which of this app's shortcuts a launcher currently holds pinned.
  *
  * The IDs come back as package names, because `ShortcutContract.shortcutId(pkg)` *is* the package
- * name — the same key `LockOrderStore` orders its rows by, which makes `deriveLocks` a set
+ * name — the same key the stored order is written in, which makes reconciling the two a set
  * operation rather than a mapping exercise.
  *
  * `null` means "no answer", and no answer must never prune anything. It is returned when there is

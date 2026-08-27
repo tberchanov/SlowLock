@@ -1,6 +1,5 @@
 package com.slowlock.feature.apps.domain
 
-import com.slowlock.feature.apps.ui.AppListUiState
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -10,6 +9,9 @@ import org.junit.Test
  * Covers only the logic that is invisible on screen: a silent sorting, dedup or cache-staleness bug
  * looks exactly like correct behaviour during manual testing. Everything observable is verified by
  * `manual-test-plan.md` instead.
+ *
+ * What the search box matches moved to [FilterAppsUseCaseTest] — it is a rule of its own, and it
+ * used to be reached from here through a UI state class.
  */
 class InstalledAppTest {
 
@@ -82,55 +84,6 @@ class InstalledAppTest {
         )
     }
 
-    /** FR-007: the query is matched ignoring case, in either direction. */
-    @Test
-    fun `visibleApps matches a mixed-case query`() {
-        val state = stateOf(app("com.instagram.android", "Instagram"), app("com.example.notes", "Notes"))
-
-        assertEquals(listOf("Instagram"), state.copy(query = "INSTA").visibleApps.map { it.label })
-        assertEquals(listOf("Instagram"), state.copy(query = "insta").visibleApps.map { it.label })
-        assertEquals(listOf("Instagram"), state.copy(query = "InStA").visibleApps.map { it.label })
-    }
-
-    /** FR-007: substring, not prefix — the middle of a name matches too. */
-    @Test
-    fun `visibleApps matches a substring from the middle of a label`() {
-        val state = stateOf(app("com.instagram.android", "Instagram"), app("com.example.notes", "Notes"))
-
-        assertEquals(listOf("Instagram"), state.copy(query = "tagram").visibleApps.map { it.label })
-    }
-
-    /** FR-008: a blank query is not a filter — the full list comes back. */
-    @Test
-    fun `visibleApps returns every app for a blank query`() {
-        val apps = listOf(app("com.instagram.android", "Instagram"), app("com.example.notes", "Notes"))
-        val state = AppListUiState(isLoading = false, apps = apps)
-
-        assertEquals(apps, state.copy(query = "").visibleApps)
-        assertEquals(apps, state.copy(query = "   ").visibleApps)
-    }
-
-    /**
-     * FR-008: filtering never re-sorts. "eBay" must stay where collation put it, between "Drive"
-     * and "Files", rather than sliding after "Files" or back to the front.
-     */
-    @Test
-    fun `visibleApps preserves the collated order of the full list`() {
-        val sorted = listOf(
-            app("com.zoom", "Zoom"),
-            app("com.ebay", "eBay"),
-            app("com.files", "Files"),
-            app("com.drive", "Drive"),
-        ).sortedByLabel(Locale.ENGLISH)
-
-        val filtered = AppListUiState(isLoading = false, apps = sorted, query = "e").visibleApps
-
-        assertEquals(listOf("Drive", "eBay", "Files"), filtered.map { it.label })
-    }
-
     private fun app(packageName: String, label: String) =
         InstalledApp(packageName = packageName, label = label, versionCode = 1L)
-
-    private fun stateOf(vararg apps: InstalledApp) =
-        AppListUiState(isLoading = false, apps = apps.toList())
 }

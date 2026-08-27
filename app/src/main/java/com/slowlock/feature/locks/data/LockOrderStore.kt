@@ -6,7 +6,6 @@ import com.slowlock.core.domain.IoDispatcher
 import com.slowlock.feature.locks.domain.LOCKS_FILE
 import com.slowlock.feature.locks.domain.LOCKS_KEY
 import com.slowlock.feature.locks.domain.LockOrderRepository
-import com.slowlock.feature.locks.domain.deriveLocks
 import com.slowlock.feature.locks.domain.encodeLocks
 import com.slowlock.feature.locks.domain.locksFrom
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,16 +22,14 @@ import kotlinx.coroutines.withContext
  * were last seen in — and doubles as the fallback for when the launcher cannot be asked at all.
  *
  * There is no `add` and no `remove`: creating a lock is the pin request's job and removing one is
- * the user's, on their home screen (FR-021).
+ * the user's, on their home screen (FR-021). What the order *should* be is decided by
+ * [com.slowlock.feature.locks.domain.LoadLocksUseCase]; this reads and writes it.
  *
  * Every function suspends onto the injected [IoDispatcher] (FR-040, D2), so callers stay main-safe
  * without having to know it (O2).
  *
  * A lock record holds the package name and nothing else (L2, Constitution V): the delay and the
  * treatment stay in `DelayConfigStore`, so there is one copy of each value on disk (FR-005).
- *
- * This file is left with only the wiring — everything decidable lives in `LockList.kt` as pure
- * functions the JVM suite can reach without a framework.
  */
 @Singleton
 class LockOrderStore @Inject constructor(
@@ -46,33 +43,22 @@ class LockOrderStore @Inject constructor(
     /**
      * The last derived list, in order — never null, never throwing (FR-007, L4, L5).
      *
-     * The fallback, not the source of truth: [deriveOrder] is the ordinary path, and this answers
-     * only when the launcher could not be asked, where the last known good list beats both an empty
-     * screen and a crash.
+     * Read on every visit: it supplies the order the launcher cannot, and it is the whole answer on
+     * the visit where the launcher could not be asked at all, where the last known good list beats
+     * both an empty screen and a crash.
      */
     override suspend fun loadOrder(): List<String> = withContext(io) {
         locksFrom(prefs.stringOrNull(LOCKS_KEY))
     }
 
     /**
-     * The lock list for [pinned], and the one call that keeps the stored order in step with it. The
-     * decision is [deriveLocks]'s; this writes back only when the order actually changed, so the
-     * ordinary visit to the Locks screen costs a read and no write.
+     * Replaces the stored order with [order].
      *
-     * **Never call this with an empty set standing in for "could not ask"** — an empty set claims
-     * the launcher holds no shortcuts at all, and acting on it would empty the screen.
-     * [com.slowlock.feature.locks.domain.PinnedShortcutsRepository.pinnedIds] answers `null` for that.
-     *
-     * `DelayConfigStore` is untouched here: an app whose lock comes and goes with its icon should
-     * find what the user last chose rather than a default (FR-005).
+     * `DelayConfigStore` is untouched: an app whose lock comes and goes with its icon should find
+     * what the user last chose rather than a default (FR-005).
      */
-    override suspend fun deriveOrder(pinned: Set<String>): List<String> = withContext(io) {
-        val cached = locksFrom(prefs.stringOrNull(LOCKS_KEY))
-        val locks = deriveLocks(cached, pinned)
-        if (locks != cached) {
-            prefs.edit().putString(LOCKS_KEY, encodeLocks(locks)).apply()
-        }
-        locks
+    override suspend fun saveOrder(order: List<String>) = withContext(io) {
+        prefs.edit().putString(LOCKS_KEY, encodeLocks(order)).apply()
     }
 }
 

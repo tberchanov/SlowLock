@@ -1,30 +1,34 @@
 package com.slowlock.feature.shortcut.domain
 
+import androidx.compose.ui.graphics.ImageBitmap
 import com.slowlock.core.domain.AppTarget
 import com.slowlock.core.domain.IconTreatment
 
 /**
  * Asks the launcher to pin a shortcut. Obligations:
  *
- * - `isRequestPinShortcutSupported()` gates every attempt, re-read at the moment of the pin,
- * because   the user can change launcher while the screen sits open.
  * - Icon baking runs off the main thread; the `ShortcutManager` calls stay on the caller's
  *   dispatcher, because `requestPinShortcut` puts a system dialog in front of the user.
  * - A declined system dialog is a normal outcome, not an error: it creates no lock and nothing is
  *   recorded, because identity is derived from the target and re-pinning is idempotent.
  *
- * No `android.*` type crosses this boundary (O1): the source icon is loaded by the implementation
- * rather than handed in as a `Bitmap`.
+ * The support gate is **not** here. `isRequestPinShortcutSupported()` must guard every attempt, but
+ * whether to attempt is a decision, and it lives in [CreateLockUseCase] with the icon load it is
+ * paired with.
+ *
+ * No `android.*` type crosses this boundary (O1): the icon arrives as Compose's [ImageBitmap], the
+ * same type [com.slowlock.core.domain.AppIconRepository] already answers with, and the conversion
+ * to `android.graphics.Bitmap` happens inside the implementation.
  */
 interface ShortcutPinRepository {
 
     /**
-     * Requests a pin for [target] with [treatment] baked into its icon.
+     * Requests a pin for [target] with [treatment] baked into [icon].
      *
-     * @return what happened to the *request*, never whether an icon appeared — the launcher owns
-     *   that outcome and the app deliberately does not observe it.
+     * Returns nothing: the launcher owns whether an icon appears and never tells the app, and the
+     * two refusals this used to report — no support, no icon — are decided before it is called.
      */
-    suspend fun requestPin(target: AppTarget, treatment: IconTreatment): PinRequestResult
+    suspend fun requestPin(target: AppTarget, treatment: IconTreatment, icon: ImageBitmap)
 }
 
 /**

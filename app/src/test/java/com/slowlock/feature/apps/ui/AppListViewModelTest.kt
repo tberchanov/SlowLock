@@ -3,11 +3,15 @@ package com.slowlock.feature.apps.ui
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.SavedStateHandle
 import com.slowlock.R
+import com.slowlock.feature.apps.domain.FilterAppsUseCase
 import com.slowlock.feature.apps.domain.InstalledApp
 import com.slowlock.feature.apps.domain.InstalledAppsRepository
+import com.slowlock.feature.apps.domain.LoadInstalledAppsUseCase
 import com.slowlock.core.domain.AppIconRepository
 import com.slowlock.core.domain.AppTarget
 import com.slowlock.core.domain.AppTargetRepository
+import com.slowlock.core.domain.CurrentLocale
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -137,7 +141,12 @@ class AppListViewModelTest {
         resolves: AppTarget?,
         installed: List<InstalledApp> = emptyList(),
     ) = AppListViewModel(
-        apps = FakeInstalledApps(installed),
+        loadInstalledApps = LoadInstalledAppsUseCase(
+            apps = FakeInstalledApps(installed),
+            ownPackage = "com.slowlock",
+            locale = CurrentLocale { Locale.ENGLISH },
+        ),
+        filterApps = FilterAppsUseCase(),
         targets = FakeTargets(resolves),
         icons = FakeIcons,
         savedState = SavedStateHandle(),
@@ -165,6 +174,11 @@ class AppListViewModelTest {
         return messages
     }
 
+    /**
+     * The real use case runs over this, rather than a fake of it: the holder's contract is what
+     * lands in state after a load, and substituting the use case would assert the substitution.
+     * What the use case itself decides is covered by [com.slowlock.feature.apps.domain.LoadInstalledAppsUseCaseTest].
+     */
     private class FakeInstalledApps(private val apps: List<InstalledApp>) : InstalledAppsRepository {
         override suspend fun load(): List<InstalledApp> = apps
     }

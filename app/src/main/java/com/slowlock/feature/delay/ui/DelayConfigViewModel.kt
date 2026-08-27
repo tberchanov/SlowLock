@@ -7,8 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.slowlock.core.domain.AppIconRepository
 import com.slowlock.core.domain.AppTarget
 import com.slowlock.core.domain.AppTargetRepository
-import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.core.domain.IconTreatment
+import com.slowlock.feature.delay.domain.LoadDelayConfigUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 class DelayConfigViewModel @Inject constructor(
     private val targets: AppTargetRepository,
     private val icons: AppIconRepository,
-    private val config: DelayConfigRepository,
+    private val loadDelayConfig: LoadDelayConfigUseCase,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -37,25 +37,20 @@ class DelayConfigViewModel @Inject constructor(
     val uiState: StateFlow<DelayConfigUiState> = _uiState.asStateFlow()
 
     /**
-     * Resolves [packageName], loads its icon, and reads its saved configuration. Idempotent per
-     * package: called from a `LaunchedEffect` keyed on the package, so a rotation lands on the same
-     * answer.
+     * Resolves [packageName], loads its icon, and reads the configuration to open on. Idempotent
+     * per package: called from a `LaunchedEffect` keyed on the package, so a rotation lands on the
+     * same answer.
      *
-     * **A delay restored from the handle wins over the one on disk** (research R8, contract S4).
-     * The handle only holds one after the user edited it, so letting the read supply the delay
-     * would silently replace an edit made before the process died with the stale saved value.
-     *
-     * The read still happens on that path: the treatment has no reason to be saved, because
-     * re-reading it gives the identical answer.
+     * Which delay wins — an edit held across process death, or the value on disk — is
+     * [LoadDelayConfigUseCase]'s; the handle it is read from is this screen's.
      */
     fun start(packageName: String) {
         viewModelScope.launch {
-            val edited: Int? = savedState[DELAY_KEY]
-            val saved = config.load(packageName)
+            val opening = loadDelayConfig(packageName, editedSeconds = savedState[DELAY_KEY])
             _uiState.update {
                 it.copy(
-                    seconds = edited ?: saved.delaySeconds,
-                    treatment = saved.treatment,
+                    seconds = opening.delaySeconds,
+                    treatment = opening.treatment,
                     loaded = true,
                 )
             }

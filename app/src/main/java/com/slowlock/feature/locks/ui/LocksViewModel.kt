@@ -3,11 +3,7 @@ package com.slowlock.feature.locks.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.slowlock.core.domain.AppIconRepository
-import com.slowlock.core.domain.AppTargetRepository
-import com.slowlock.core.domain.DelayConfigRepository
-import com.slowlock.feature.locks.domain.LockOrderRepository
-import com.slowlock.feature.locks.domain.PinnedShortcutsRepository
-import com.slowlock.feature.locks.domain.assembleLocks
+import com.slowlock.feature.locks.domain.LoadLocksUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,21 +13,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Owns the Locks screen's state so it survives rotation without re-reading three sources.
+ * Owns the Locks screen's state so it survives rotation without re-reading the sources behind it.
  *
- * Every collaborator arrives through the constructor (FR-024, V1, V2); [AppTargetRepository] is the
- * seam [LocksViewModelTest] substitutes to drive the null-resolution path (FR-020).
- *
- * This class holds only the wiring. Everything decidable lives outside it — the rows in
- * [assembleLocks], the latch in [LocksUiState.withLocks] — because `viewModelScope` dispatches on
- * `Dispatchers.Main`, so nothing worth asserting may live behind it.
+ * Every collaborator arrives through the constructor (FR-024, V1, V2). What a row is and how the
+ * list is derived belong to [LoadLocksUseCase]; the latch belongs to [LocksUiState.withLocks]. What
+ * is left here is the call and the dialog.
  */
 @HiltViewModel
 class LocksViewModel @Inject constructor(
-    private val lockOrder: LockOrderRepository,
-    private val pinnedShortcuts: PinnedShortcutsRepository,
-    private val config: DelayConfigRepository,
-    private val targets: AppTargetRepository,
+    private val loadLocks: LoadLocksUseCase,
     /**
      * Exposed so each row loads its own icon lazily as it scrolls into view, and so [refresh] does
      * not wait for a rasterization it does not need (FR-015). Icons never enter [uiState].
@@ -57,18 +47,7 @@ class LocksViewModel @Inject constructor(
      */
     fun refresh() {
         viewModelScope.launch {
-            // The list is derived from the launcher, not read from a record (FR-003a): a lock
-            // exists exactly when its shortcut is pinned, which is what makes the screen agree
-            // with the home screen — a declined pin dialog never creates one, and an icon dragged
-            // off takes its lock.
-            //
-            // `null` is not an empty set. It means the launcher could not be asked, and the only
-            // safe reading of "we don't know" is the last list that was known good.
-            val pinned = pinnedShortcuts.pinnedIds()
-            val packages =
-                if (pinned == null) lockOrder.loadOrder() else lockOrder.deriveOrder(pinned)
-            val locks = assembleLocks(packages, config::load, targets::resolve)
-            _uiState.update { it.withLocks(locks) }
+            _uiState.update { it.withLocks(loadLocks()) }
         }
     }
 

@@ -1,27 +1,29 @@
 <!--
-SYNC IMPACT REPORT — v3.0.0 → v4.0.0 (MAJOR)
+SYNC IMPACT REPORT — v4.0.0 → v5.0.0 (MAJOR)
 
 Modified principles:
-- II — state-holder scoping rule added: a screen's holder MUST be scoped to its navigation entry
-  and cleared on pop. Activity-scoped holders, compliant under 3.0.0, are now defects.
-- V — "Standard solutions over bespoke ones" added, ranked above KISS on choice of mechanism.
-  Hand-rolled equivalents of solved problems, previously sanctioned by KISS, are now defects.
+- II — the use-case clause is redefined. Framework-independent logic MUST live in a use case, and
+  a repository implementation is read-write only. Filtering, sorting, merging sources or deciding
+  policy inside a repository, a ViewModel or a UI state class are now defects.
+- V — the conflict order now names a use case holding logic as a seam, so the one-implementation
+  clause does not reach it. The forwarding-only use case stays prohibited, narrowed to what only
+  forwards to a single repository call.
 
-Added: Governance → Style (binds this file and every future amendment).
-       Additional Constraints → Navigation (first-party Jetpack library; bespoke prohibited).
+Added: no principle or section.
 
-Removed: no binding rule. This revision restates 3.0.0 under the new Style rule — rationales
-capped, duplicated rules stated once, migration narrative dropped.
+Removed: "Use cases are warranted when logic is shared across ViewModels or is genuinely a domain
+rule." The companion permission for a ViewModel to call a repository directly survives in narrowed
+form — for a read or write carrying no logic.
 
-Effect on existing specs: specs/009-constitution-alignment is shipped and not retroactively
-non-compliant, but three of its Complexity Tracking entries are superseded — the bespoke
-`when` navigation, the `rememberSaveable` stage, and the `ShortcutConfigScreen` treatment
-owner. The feature that adopts navigation resolves all three.
+Effect on existing specs: specs/010-navigation-adoption is shipped and not retroactively
+non-compliant, but four sites become defects that MUST NOT receive new code until migrated:
+`InstalledAppsSource.load` (exclude, dedupe, sort inside a repository), `LockOrderStore.deriveOrder`
+(a two-source merge and its write-back inside a repository), `LocksViewModel.refresh` (a four-source
+assembly inside a holder), and `AppListUiState.visibleApps` (a query filter on a UI state class).
+The feature that introduces use cases resolves all four.
 
 Templates: ✅ plan-template.md (generic gate, still eight principles) · ✅ spec-template.md ·
 ✅ tasks-template.md · ✅ checklist-template.md · ✅ CLAUDE.md · ✅ README.md
-
-Deferred: which Jetpack navigation artifact to adopt is a plan-level decision under Principle I.
 -->
 
 # SlowLock Constitution
@@ -64,15 +66,29 @@ The project runs on the current Android toolchain.
   filesystem, the clock — MUST be reached through a repository whose interface is in the domain
   and whose implementation is in the data layer. Callers depend on the interface; platform types
   MUST NOT cross it.
+- **A repository implementation reads and writes, and does nothing else.** Decoding the stored or
+  platform representation into domain types is part of reading, and encoding is part of writing;
+  both stay, including whatever the format demands to yield a well-formed value. Everything else
+  is a use case's. A repository serves one source and MUST NOT read another.
 - **Dependency injection.** Constructor injection only. Inline construction, static holders,
   global singletons and hand-rolled service locators are prohibited; the project's single declared
   framework is the only mechanism.
-- **Use cases** are warranted when logic is shared across ViewModels or is genuinely a domain
-  rule. A ViewModel MAY call a repository directly where a use case would only forward.
+- **Use cases hold the logic.** Filtering, sorting, merging several sources, choosing between
+  them, and any rule a requirement states MUST live in a use case: an injectable class in the
+  feature's `domain`, exposing `operator fun invoke`, taking its collaborators through the
+  constructor. This holds wherever the logic would otherwise sit — a repository implementation, a
+  `ViewModel`, or a computed property on a UI state class. Filtering a list by a search query is a
+  use case, not derived state.
+- **What stays outside a use case.** Presentation shape is the `ViewModel`'s and the UI state's:
+  which of several states a screen is in, what a value reads as on screen, whether a control is
+  enabled. A `ViewModel` MAY call a repository directly for a read or write carrying no logic,
+  because a use case that would only forward is prohibited (Principle V).
 
 **Rationale:** state that outlives its screen is invisible until a user returns and finds a
 previous visit's answer waiting; scoping it to the entry makes lifetime structural rather than a
-`clear()` someone has to remember.
+`clear()` someone has to remember. Logic placed wherever it was first needed ends up split across a
+source, a holder and a state class, where no reader finds the whole rule and no test reaches it
+without a framework.
 
 ### III. Feature First, Layers Inside
 
@@ -149,8 +165,10 @@ happens.
 - **Conflict order.** Principle II's boundaries are structural and stay. The standard solution
   wins on choice of mechanism. KISS then governs how much of that mechanism is used, and what
   fills the boundaries. Keeping the presentation/domain/data seam is not over-engineering, nor is
-  adopting the navigation library; wrapping that library in a project-specific abstraction, adding
-  a forwarding-only use case, or mapping between two identical shapes is.
+  adopting the navigation library, nor is a use case holding logic — that use case is the test seam
+  the one-implementation rule above asks for, so the rule does not reach it. Wrapping that library
+  in a project-specific abstraction, adding a use case that only forwards to a single repository
+  call, or mapping between two identical shapes is.
 
 **Rationale:** a bespoke mechanism must be understood before it can be changed, while a standard
 one is already known to whoever arrives and is maintained by someone else. Its cost is not paid
@@ -340,4 +358,4 @@ surviving review MUST be documented, never silently accepted.
 **Runtime guidance.** `CLAUDE.md` carries agent-facing runtime guidance and points to the active
 plan. It is subordinate to this file and MUST NOT restate principles — only reference them.
 
-**Version**: 4.0.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-27
+**Version**: 5.0.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-27

@@ -8,10 +8,9 @@ import com.slowlock.R
 import com.slowlock.core.domain.AppIconRepository
 import com.slowlock.core.domain.AppTarget
 import com.slowlock.core.domain.AppTargetRepository
-import com.slowlock.core.domain.DelayConfig
-import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.core.domain.IconTreatment
-import com.slowlock.feature.shortcut.domain.ShortcutPinRepository
+import com.slowlock.feature.shortcut.domain.CreateLockResult
+import com.slowlock.feature.shortcut.domain.CreateLockUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -35,8 +34,7 @@ import kotlinx.coroutines.launch
 class ShortcutConfigViewModel @Inject constructor(
     private val targets: AppTargetRepository,
     private val icons: AppIconRepository,
-    private val config: DelayConfigRepository,
-    private val pins: ShortcutPinRepository,
+    private val createLock: CreateLockUseCase,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -82,32 +80,25 @@ class ShortcutConfigViewModel @Inject constructor(
     }
 
     /**
-     * Re-resolve, save, pin, then report — in that order, and the order is the contract.
-     *
-     * The target may have been uninstalled while this screen sat open, so the resolution at tap
-     * time is the one that counts. The configuration is written *before* the pin request goes out,
-     * so a launcher that pins asynchronously can never fire the shortcut before its delay exists on
-     * disk.
-     *
-     * Creating a lock is not a write: a lock exists exactly when its shortcut is pinned, so the pin
-     * request creates it — and only if the user accepts the launcher's dialog.
+     * Runs [CreateLockUseCase] and turns its answer into what the screen shows. The ordering the
+     * lock depends on is the use case's; what is left here is the button and the message.
      */
     fun create(packageName: String, delaySeconds: Int, onCreated: () -> Unit) {
         val treatment = _uiState.value.treatment
         _uiState.update { it.copy(creating = true) }
         viewModelScope.launch {
-            val fresh = targets.resolve(packageName)
-            if (fresh == null) {
-                // The button comes back to life (state) and the user is told once (event).
-                _uiState.update { it.copy(creating = false) }
-                _messages.send(R.string.shortcut_target_unavailable)
-                return@launch
+            when (createLock(packageName, delaySeconds, treatment)) {
+                CreateLockResult.TargetMissing -> {
+                    // The button comes back to life (state) and the user is told once (event).
+                    _uiState.update { it.copy(creating = false) }
+                    _messages.send(R.string.shortcut_target_unavailable)
+                }
+
+                // `Created.pin` is deliberately unread. The launcher owns whether an icon appears
+                // and never tells the app, so there is nothing to honestly report (FR-012) — the
+                // flow closes either way.
+                is CreateLockResult.Created -> onCreated()
             }
-            config.save(packageName, DelayConfig(delaySeconds, treatment))
-            // The result is deliberately not acted on: the launcher owns whether an icon appears
-            // and never tells the app, so there is nothing to honestly report (FR-012).
-            pins.requestPin(fresh, treatment)
-            onCreated()
         }
     }
 

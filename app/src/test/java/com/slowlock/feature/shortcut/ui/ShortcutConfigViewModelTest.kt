@@ -8,7 +8,9 @@ import com.slowlock.core.domain.AppTargetRepository
 import com.slowlock.core.domain.DelayConfig
 import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.core.domain.IconTreatment
-import com.slowlock.feature.shortcut.domain.PinRequestResult
+import com.slowlock.feature.shortcut.domain.CreateLockUseCase
+import com.slowlock.feature.shortcut.domain.PinSupport
+import com.slowlock.feature.shortcut.domain.PinSupportRepository
 import com.slowlock.feature.shortcut.domain.ShortcutPinRepository
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -75,12 +77,17 @@ class ShortcutConfigViewModelTest {
     private fun viewModel(savedState: SavedStateHandle) = ShortcutConfigViewModel(
         targets = FakeTargets,
         icons = FakeIcons,
-        config = FakeConfig,
-        pins = FakePins,
+        createLock = CreateLockUseCase(
+            targets = FakeTargets,
+            config = FakeConfig,
+            support = FakeSupport,
+            icons = FakeIcons,
+            pins = FakePins,
+        ),
         savedState = savedState,
     )
 
-    /** None of the four collaborators is reached by the branch under test. */
+    /** None of the collaborators is reached by the branch under test. */
     private object FakeTargets : AppTargetRepository {
         override suspend fun resolve(packageName: String): AppTarget? = null
     }
@@ -95,11 +102,16 @@ class ShortcutConfigViewModelTest {
         override suspend fun save(packageName: String, config: DelayConfig) = Unit
     }
 
+    private object FakeSupport : PinSupportRepository {
+        override suspend fun current(): PinSupport = PinSupport.Supported
+    }
+
     private object FakePins : ShortcutPinRepository {
         override suspend fun requestPin(
             target: AppTarget,
             treatment: IconTreatment,
-        ): PinRequestResult = PinRequestResult.Requested
+            icon: ImageBitmap,
+        ) = Unit
     }
 
     private companion object {

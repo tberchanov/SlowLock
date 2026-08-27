@@ -14,15 +14,12 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.util.Log
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
-import com.slowlock.core.domain.AppIconRepository
 import com.slowlock.core.domain.AppTarget
 import com.slowlock.core.domain.IconTreatment
 import com.slowlock.core.domain.IoDispatcher
 import com.slowlock.shortcut.ShortcutLaunchActivity
-import com.slowlock.feature.shortcut.domain.PinRequestResult
-import com.slowlock.feature.shortcut.domain.PinSupport
-import com.slowlock.feature.shortcut.domain.PinSupportRepository
 import com.slowlock.feature.shortcut.domain.ShortcutContract
 import com.slowlock.feature.shortcut.domain.ShortcutPinRepository
 import com.slowlock.feature.shortcut.domain.ShortcutSpec
@@ -34,28 +31,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 /**
- * The gate the constitution names: `isRequestPinShortcutSupported()` MUST guard every pin attempt,
- * not just the root's choice of screen (FR-013).
- *
- * A free function taking [support] as a lambda rather than a private `if`, so `PinGateTest` can
- * drive both answers on the JVM with no launcher and no `Context`. Support is re-read at the moment
- * of the pin, because the user can change launcher while the configuration screen is open.
- * [PinSupport.Unknown] is not an answer and does not open the gate.
- *
- * @return [PinRequestResult.Requested] if the pin was attempted, [PinRequestResult.Unsupported] if
- *   the gate held — whether the *request was issued*, never whether a shortcut was created, which
- *   the launcher owns and the app deliberately does not observe (FR-012).
- */
-suspend fun pinWhenSupported(
-    support: suspend () -> PinSupport,
-    pin: suspend () -> Unit,
-): PinRequestResult {
-    if (support() != PinSupport.Supported) return PinRequestResult.Unsupported
-    pin()
-    return PinRequestResult.Requested
-}
-
-/**
  * Bakes the chosen treatment into a bitmap and asks the launcher to pin a shortcut carrying it.
  *
  * Nothing is recorded about what has been pinned (FR-027): identity is derived from the target, so
@@ -65,19 +40,11 @@ suspend fun pinWhenSupported(
 @Singleton
 class ShortcutPinner @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    /** Injected so tests can drive it and production reads the *current* launcher (FR-013). */
-    private val support: PinSupportRepository,
-    /**
-     * Loaded here rather than handed in, which keeps `android.graphics.Bitmap` out of
-     * [ShortcutPinRepository]'s signature (O1). The screen already asked for the same package and
-     * version to draw its preview, so this hits the memory tier.
-     */
-    private val icons: AppIconRepository,
     @param:IoDispatcher private val io: CoroutineDispatcher,
 ) : ShortcutPinRepository {
 
     /**
-     * Requests a pin for [target] carrying [treatment] applied to its icon.
+     * Requests a pin for [target] carrying [treatment] applied to [icon].
      *
      * The bitmap work runs on the injected dispatcher (FR-024, D2); the two `ShortcutManager` calls
      * stay on the caller's — they are cheap binder calls from a foreground tap, and
@@ -89,16 +56,10 @@ class ShortcutPinner @Inject constructor(
     override suspend fun requestPin(
         target: AppTarget,
         treatment: IconTreatment,
-    ): PinRequestResult {
-        // C12: non-null pixels or nothing. A pinned shortcut is effectively permanent, so a
-        // placeholder on someone's home screen is worse than no shortcut at all.
-        val source = icons.icon(target.packageName, target.versionCode)
-            ?: return PinRequestResult.IconUnavailable
-
-        return pinWhenSupported({ support.current() }) {
-            val treated = withContext(io) { bake(source.asAndroidBitmap(), treatment) }
-            request(shortcutSpec(target), treated)
-        }
+        icon: ImageBitmap,
+    ) {
+        val treated = withContext(io) { bake(icon.asAndroidBitmap(), treatment) }
+        request(shortcutSpec(target), treated)
     }
 
     /**

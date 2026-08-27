@@ -1,8 +1,5 @@
-package com.slowlock.feature.shortcut.data
+package com.slowlock.feature.shortcut.domain
 
-import com.slowlock.feature.shortcut.domain.PinRequestResult
-import com.slowlock.feature.shortcut.domain.PinSupport
-import com.slowlock.feature.shortcut.domain.pinSupport
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,6 +12,9 @@ import org.junit.Test
  * The root already refuses to show the configuration screen on an unsupported launcher (FR-029),
  * but this second check is not redundant: support is re-read at the moment of the pin, because the
  * user can change launcher while the screen is open.
+ *
+ * The gate is a decision, so it sits with [CreateLockUseCase] rather than in the data layer where
+ * it used to be declared — a pure function in a `data` file was a layer mismatch of its own.
  */
 class PinGateTest {
 
