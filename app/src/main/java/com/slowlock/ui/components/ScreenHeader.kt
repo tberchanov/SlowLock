@@ -31,28 +31,18 @@ import com.slowlock.R
 import com.slowlock.ui.theme.SlowLockType
 
 /**
- * A screen's title, optionally preceded by a back tile.
+ * A screen's title, optionally preceded by a back tile (contract U1).
  *
- * Contract U1. Three screens use it and they differ in exactly one way — whether there is anywhere
- * to go back to — so that is the only parameter beyond the title.
+ * `onBack == null` renders no tile and no leading space: a disabled tile or an empty 40dp gap would
+ * both be worse than the title starting at the content edge (FR-010).
  *
- * **`onBack == null` renders no tile and no leading space.** The app list is the app's root in
- * Phase 1, so it has no back target; drawing a disabled tile, or leaving an empty 40dp gap where
- * one would be, would both be worse than the title simply starting at the content edge (FR-010).
+ * [step] is the counter the design draws (`1 / 3`); `null` renders nothing, which is what the root
+ * screens pass. The `3` lives in the string resource, not here — a computed count would silently
+ * relabel every step the day a fourth one is added.
  *
- * **[step] is the counter the design draws (`1 / 3`).** Feature 005 gave it callers: the Locks
- * screen is now the root, so step 1 genuinely has a predecessor and the count is a claim the app
- * can honour (005 FR-029, contract K5). `null` renders nothing, which is what the two root
- * screens pass and what keeps this a header rather than a wizard header.
- *
- * The `3` lives in the string resource, not here — the flow has three steps because the design
- * says so, not because the app happens to hold three stages, and a computed count would silently
- * relabel every step the day a fourth one is added (research R7).
- *
- * **The counter is announced as part of the title, not as a stop of its own.** It is information,
- * so hiding it from a screen reader would withhold the very thing US3 exists to give; but it is
- * not a control, and a separate focus stop reading "1 / 3" is a worse way to say "step 1 of 3".
- * Merging the title group's semantics gives one stop that reads both.
+ * The counter is announced as part of the title rather than as a stop of its own: it is
+ * information, not a control, and a separate focus stop reading "1 / 3" is a worse way to say "step
+ * 1 of 3".
  */
 @Composable
 fun ScreenHeader(
@@ -71,13 +61,9 @@ fun ScreenHeader(
         if (onBack != null) {
             BackTile(onBack = onBack)
         }
-        // The title and the counter merge into **one** stop; the back tile deliberately sits
-        // outside this group. A merge that reached the whole header row would absorb the tile's
-        // `clickable` semantics too and cost the user their separate, actionable back target —
-        // so the group starts after it.
-        //
-        // `weight(1f)` with no counter changes nothing that is visible: the title still draws at
-        // the content edge, it merely has the rest of the row to draw into.
+        // The title and the counter merge into one stop, and the back tile deliberately sits
+        // outside the group: a merge reaching the whole row would absorb the tile's `clickable`
+        // semantics and cost the user their separate, actionable back target.
         Row(
             modifier = Modifier
                 .weight(1f)
@@ -92,16 +78,14 @@ fun ScreenHeader(
             if (step != null) {
                 val stepDescription =
                     stringResource(R.string.step_counter_description, step)
-                // Pushed to the trailing edge, so the counter sits opposite the title however
-                // long the title is.
+                // Trailing edge, so the counter sits opposite the title however long it is.
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = stringResource(R.string.step_counter, step),
                     style = SlowLockType.Footnote,
-                    // Ink40 on Bone (C1, C3). Mono, because it is a number the user reads (C6).
                     color = MaterialTheme.colorScheme.outline,
-                    // The spoken form replaces the glyphs the visible form uses; the merge above
-                    // then reads it directly after the title, as one phrase.
+                    // The spoken form replaces the visible glyphs; the merge above then reads it
+                    // directly after the title, as one phrase.
                     modifier = Modifier.semantics {
                         contentDescription = stepDescription
                     },
@@ -112,14 +96,12 @@ fun ScreenHeader(
 }
 
 /**
- * The back tile.
+ * The back tile: drawn at 40dp, tappable at 48dp. It is not one of the two control groups FR-045
+ * exempts from the accessibility floor, so it meets the floor without the design paying for it
+ * (C10).
  *
- * It **draws** at 40dp and is **tappable** at 48dp. Drawn size and touch size are independent on
- * Android, and the back tile is not one of the two control groups FR-045 exempts from the
- * accessibility floor — so it meets the floor without the design paying for it (contract C10).
- *
- * `sizeIn` on the outer box rather than `size` on the tile: the touch target grows the hit area
- * without displacing the drawn tile, so the header still lines up with the artboard.
+ * `sizeIn` on the outer box rather than `size` on the tile, so the touch target grows the hit area
+ * without displacing the drawn tile.
  */
 @Composable
 private fun BackTile(onBack: () -> Unit, modifier: Modifier = Modifier) {

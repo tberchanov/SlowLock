@@ -111,8 +111,16 @@ if $PATHS_ONLY; then
     exit 0
 fi
 
-# Validate branch name
-check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+# Validate branch name.
+#
+# Skipped when .specify/feature.json already pins the active feature directory and it resolves
+# to the directory we are about to use: the branch name is then not the mechanism locating the
+# feature, so enforcing its shape blocks the workflow for no benefit. This is what
+# feature_json_matches_feature_dir exists for (see common.sh), and it is what lets a project
+# whose governance reserves branch creation to a human run the full flow on its default branch.
+if ! feature_json_matches_feature_dir "$REPO_ROOT" "$FEATURE_DIR"; then
+    check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+fi
 
 # Validate required directories and files
 if [[ ! -d "$FEATURE_DIR" ]]; then

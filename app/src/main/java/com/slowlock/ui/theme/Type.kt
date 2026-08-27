@@ -12,20 +12,15 @@ import com.slowlock.R
 /**
  * SlowLock's two typefaces and the roles they fill.
  *
- * Sizes, weights and letter-spacing are read off the artboards and fixed in
- * `specs/004-visual-redesign/data-model.md` §2, which `contracts/design-tokens.md` C6 makes part
- * of the contract: a screen using the right family at the wrong size is not aligned with the
- * design.
+ * Sizes, weights and letter-spacing are fixed in `specs/004-visual-redesign/data-model.md` §2,
+ * which C6 makes part of the contract.
  *
- * **Both families are ordinary resource fonts, which Compose loads with a blocking strategy**
- * (research R2). That is load-bearing rather than incidental — FR-003 forbids a substitute face
- * rendering and then swapping, and FR-029 forbids the wait screen changing at all once it is up.
- * A downloadable font would put exactly that swap on the one screen that must not move, and would
- * need a network the app does not have.
+ * Both families are ordinary resource fonts, which Compose loads with a blocking strategy
+ * (research R2) — load-bearing, because FR-003 forbids a substitute face rendering and then
+ * swapping, and FR-029 forbids the wait screen changing at all once it is up.
  *
- * Five weight files ship and **no weight is synthesised**: every [FontWeight] named below has a
- * file behind it (C7). Asking for a weight that was not shipped makes the renderer fake it, which
- * is why the families below list weights explicitly instead of leaving Compose to interpolate.
+ * No weight is synthesised: every [FontWeight] named below has a shipped file behind it (C7), which
+ * is why the families list weights explicitly rather than leaving Compose to interpolate.
  */
 
 /** Prose: headings, sentences, app labels, action labels. Latin coverage. */
@@ -35,10 +30,7 @@ val InstrumentSans = FontFamily(
     Font(R.font.instrument_sans_semibold, FontWeight.SemiBold),
 )
 
-/**
- * Numerals and labels. **Every number the user reads is set in this face** (FR-004) — the delay
- * is the product's central value, and setting it in mono is how the design says so.
- */
+/** Numerals and labels. Every number the user reads is set in this face (FR-004). */
 val JetBrainsMono = FontFamily(
     Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
     Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
@@ -47,23 +39,20 @@ val JetBrainsMono = FontFamily(
 /**
  * The app's own type roles, named for what they are rather than for a Material size step.
  *
- * These exist alongside [SlowLockTypography] rather than inside it because the design assigns type
- * by *role* — a number is mono because it is a number, not because it sits at a particular step of
- * a scale. Stock Material components (the slider, the snackbar, the text field) read the M3
- * typography below; screens written for this design read these.
+ * Separate from [SlowLockTypography] because the design assigns type by *role* — a number is mono
+ * because it is a number, not because it sits at a step of a scale. Stock Material components read
+ * the M3 typography below; screens written for this design read these.
  *
- * **The wait screen deliberately uses none of them.** FR-033 requires it to resolve its own type
- * so a change here cannot reach it by accident; its one style is declared in `WaitScreen.kt`.
+ * The wait screen deliberately uses none of them: FR-033 requires it to resolve its own type so a
+ * change here cannot reach it by accident.
  */
 object SlowLockType {
 
     /**
      * The Locks screen's title, and only that.
      *
-     * A **sibling** of [Title] rather than a replacement for it, and the distinction is the point
-     * of 007 User Story 2: [Title] is the *flow's* heading — a step in a wizard, sat beside a back
-     * tile — while this is the app's home screen announcing itself. The `New · Locks` artboard
-     * draws them at visibly different sizes for that reason, so both exist.
+     * A sibling of [Title], not a replacement: [Title] is the *flow's* heading — a step in a wizard
+     * beside a back tile — while this is the app's home screen announcing itself.
      */
     val TitleDisplay = TextStyle(
         fontFamily = InstrumentSans,
@@ -100,11 +89,9 @@ object SlowLockType {
     /**
      * A lock's app name on the Locks screen.
      *
-     * A **sibling** of [RowLabel], not an edit to it (007 FR-025). The two artboards differ on
-     * purpose: the app list draws hundreds of names at Regular, where Medium would be a wall of
-     * weight, while the Locks screen draws a handful of cards whose name is the row's subject. Had
-     * this changed [RowLabel] in place it would have silently restyled a screen feature 007 is not
-     * allowed to touch.
+     * A sibling of [RowLabel], not an edit to it (FR-025): the app list draws hundreds of names at
+     * Regular, where Medium would be a wall of weight, while the Locks screen draws a handful of
+     * cards whose name is the row's subject.
      */
     val RowTitle = TextStyle(
         fontFamily = InstrumentSans,
@@ -150,9 +137,8 @@ object SlowLockType {
     /**
      * The delay numeral — the largest thing on its screen.
      *
-     * 104sp is the **cap**, not a fixed size: FR-014a makes this the element that yields when the
-     * font scale grows or the screen shrinks, so the delay screen renders it with auto-sizing
-     * bounded by this value (C11, research R10).
+     * 104sp is the cap, not a fixed size: FR-014a makes this the element that yields when the font
+     * scale grows or the screen shrinks, so the delay screen auto-sizes bounded by it (C11).
      */
     val Readout = TextStyle(
         fontFamily = JetBrainsMono,
@@ -162,13 +148,7 @@ object SlowLockType {
         letterSpacing = (-0.03).em,
     )
 
-    /**
-     * The delay badge's label on a Locks row: `10s`.
-     *
-     * Mono and Medium, because it is the number the row is *for* — the design's whole argument is
-     * that the delay is the product's central value, and this is the smallest place it says so
-     * (C6, 007 FR-015).
-     */
+    /** The delay badge on a Locks row: `10s`. Mono, because it is the number the row is for. */
     val Badge = TextStyle(
         fontFamily = JetBrainsMono,
         fontWeight = FontWeight.Medium,
@@ -200,14 +180,12 @@ object SlowLockType {
     /**
      * The count beneath the Locks title: `3 LOCKS`.
      *
-     * Same family and size as [Eyebrow], different tracking — the artboard sets this line at
-     * 0.06em and the unsupported-launcher eyebrow at 0.14em, and a shared style would have to be
-     * wrong for one of them. Mono, because it leads with a number the user reads (C6).
+     * Same family and size as [Eyebrow] but different tracking (0.06em against 0.14em), so a shared
+     * style would have to be wrong for one of them.
      *
-     * **The capitals live in the resource, not in a transform** (contract C8): `locks_count_caption`
-     * is drawn and `locks_count` is spoken. Uppercasing at display time is a locale trap and would
-     * take the decision away from the translator. The letter-spacing comes from here, never from
-     * spaces typed between the letters.
+     * The capitals live in the resource, not in a transform (C8): `locks_count_caption` is drawn
+     * and `locks_count` spoken, because uppercasing at display time is a locale trap that takes the
+     * decision away from the translator. Letter-spacing comes from here, never from typed spaces.
      */
     val Count = TextStyle(
         fontFamily = JetBrainsMono,
@@ -241,12 +219,9 @@ object SlowLockType {
 }
 
 /**
- * Material 3's scale, in Instrument Sans.
- *
- * Its job is the components this app does not write itself — the slider, the snackbar, the text
- * field — so that nothing renders in the platform's default face. Screens written for this design
- * use [SlowLockType] instead, which is why only the slots those components actually reach are
- * overridden here.
+ * Material 3's scale, in Instrument Sans, for the components this app does not write itself — the
+ * slider, the snackbar, the text field — so nothing renders in the platform's default face. Only
+ * the slots those components actually reach are overridden.
  */
 val SlowLockTypography = Typography(
     titleLarge = SlowLockType.Title,

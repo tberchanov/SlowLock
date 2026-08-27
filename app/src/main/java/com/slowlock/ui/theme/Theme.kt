@@ -7,19 +7,15 @@ import androidx.compose.runtime.Composable
 /**
  * The app's theme. One scheme, no parameters.
  *
- * **`dynamicColor` and `darkTheme` are deleted, not defaulted** (FR-001, FR-008, contract C4,
- * research R5). Before feature 004 this function took both, and dynamic colour was on by default —
- * which meant SlowLock's appearance was decided by the user's wallpaper and differed on every
- * device. A parameter left in place with a `false` default would be a parameter someone passes
- * `true` to later; removing them is what makes FR-001 enforceable rather than merely stated.
+ * `dynamicColor` and `darkTheme` are deleted, not defaulted (FR-001, FR-008, C4). Dynamic colour
+ * let the user's wallpaper decide SlowLock's appearance; a parameter left in place with a `false`
+ * default is a parameter someone passes `true` to later.
  *
- * Light-only is a **Phase 1 position, not a permanent one**. Every artboard in the design source
- * is light, and a dark ramp derived without a reviewed design would be a guess. Phase 3 builds it
- * from the same tokens and restores a `darkTheme` path here.
+ * Light-only is a Phase 1 position, not a permanent one: every artboard is light, and a dark ramp
+ * derived without a reviewed design would be a guess.
  *
- * The one surface that still follows the system light/dark setting is the wait screen — it is not
- * in this theme's scope at all, resolves its own colours through `values-night`, and does so
- * precisely so a change here cannot reach it (FR-031, FR-033).
+ * The wait screen is not in this theme's scope at all — it resolves its own colours through
+ * `values-night`, precisely so a change here cannot reach it (FR-031, FR-033).
  */
 @Composable
 fun SlowLockTheme(content: @Composable () -> Unit) {
@@ -32,19 +28,15 @@ fun SlowLockTheme(content: @Composable () -> Unit) {
 }
 
 /**
- * Material 3's roles, filled from the eleven tokens in `Color.kt`.
+ * Material 3's roles, filled from the eleven tokens in `Color.kt`. The mapping is one-directional:
+ * tokens are the source, this scheme is derived, and reading a colour back out to define a token is
+ * how a twelfth gets in without anyone deciding to add one.
  *
- * The mapping is one-directional and stated in `data-model.md` §1: tokens are the source, this
- * scheme is derived. Reading a colour back out of the scheme to define a token would invert that
- * and is how a twelfth colour gets in without anyone deciding to add one.
+ * `onPrimary` is [Ink] rather than a light colour, deliberately: amber with a near-black label
+ * measures 5.82:1, where white on amber would be 2.4:1 (C2).
  *
- * `onPrimary` is [Ink] rather than a light colour, which is unusual and deliberate: the primary
- * action is amber with a near-black label, measuring 5.82:1. White on amber would be 2.4:1 and
- * illegible (C2, research R14).
- *
- * The `container` roles that the design has no equivalent for are pointed at the nearest honest
- * token rather than left to Material's defaults, which would introduce purples the palette does
- * not contain.
+ * The `container` roles the design has no equivalent for point at the nearest honest token rather
+ * than Material's defaults, which would introduce purples the palette does not contain.
  */
 private val SlowLockColorScheme = lightColorScheme(
     primary = Amber,
@@ -84,10 +76,9 @@ private val SlowLockColorScheme = lightColorScheme(
 
     scrim = Ink,
 
-    // Material's defaults here are reds, and a red is a twelfth colour waiting for the first
-    // component that decides to show an error state. The app has no error-state UI today, so
-    // pointing these at the palette costs nothing and closes the hole SC-009 would otherwise
-    // leave open.
+    // Material's defaults here are reds — a twelfth colour waiting for the first component that
+    // decides to show an error state. The app has no error-state UI, so this costs nothing
+    // (SC-009).
     error = AmberDark,
     onError = Bone,
     errorContainer = AmberWash,

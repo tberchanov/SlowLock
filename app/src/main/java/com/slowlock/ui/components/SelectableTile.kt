@@ -22,30 +22,21 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /**
- * One choice in a single-choice row. Contract U4.
+ * One choice in a single-choice row (contract U4), backing both the delay presets and the icon
+ * treatments: they look different but *select* identically.
  *
- * Backs both the delay presets and the icon treatments. They look different — one holds a mono
- * label, the other a swatch above a name — but they *select* identically, which is the part worth
- * sharing.
+ * A component rather than a styled `Box` because `Modifier.selectable` with [Role.RadioButton] is
+ * what carries the selected state to assistive technology. A hand-rolled tile signalling selection
+ * by fill colour alone would silently lose it, which FR-043 forbids.
  *
- * **Why this is a component and not a styled `Box`.** `Modifier.selectable` with [Role.RadioButton]
- * is what carries the selected state to assistive technology. The screens this replaces used
- * `FilterChip`, which supplied those semantics for free; a hand-rolled tile signalling selection
- * only by fill colour would silently lose them, which FR-043 forbids outright. Putting the
- * semantics in one place is how the swap keeps what the chips had.
+ * `contentDescription` is required, not optional: a preset's visible text is a bare value, and "5s"
+ * would otherwise announce as two characters rather than as the action it performs (FR-044).
  *
- * **`contentDescription` is required, not optional.** The preset tiles' visible text is a bare
- * value — "5s" would otherwise announce as two characters rather than as the action it performs
- * (FR-044). The caller knows the sentence; the tile cannot invent it.
+ * This tile ships below the 48dp accessibility floor, deliberately — it draws at the size the
+ * design specifies and applies no minimum touch target. FR-045 records the decision; C10 scopes it
+ * to this component and the delay presets only. If re-decided, the fix is one `sizeIn` below.
  *
- * **This tile ships below the 48dp accessibility floor, deliberately.** It draws at the size the
- * design specifies and applies no minimum touch target. Material 3 components enforce 48dp
- * automatically and a custom surface like this one does not — so the shortfall arrives by default
- * rather than by effort, which is worth knowing, because it means the accessible option was the
- * cheaper one here. FR-045 records the decision to prefer the drawn size; contract C10 scopes it to
- * this component and the delay presets only. If it is re-decided, the fix is one `sizeIn` below.
- *
- * The **caller** wraps the row in `Modifier.selectableGroup()`.
+ * The *caller* wraps the row in `Modifier.selectableGroup()`.
  */
 @Composable
 fun SelectableTile(
@@ -79,9 +70,8 @@ fun SelectableTile(
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .background(container)
             .border(BorderStroke(1.dp, outline), shape)
-            // Merge the swatch and the label into one node so the tile announces the caller's
-            // sentence once, rather than reading its children out separately. `selectable` above
-            // still supplies the role and the selected state.
+            // Merged into one node so the tile announces the caller's sentence once rather than
+            // reading its children out separately. `selectable` still supplies role and state.
             .semantics(mergeDescendants = true) {
                 this.contentDescription = contentDescription
             }

@@ -1,23 +1,19 @@
 package com.slowlock.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import java.io.File
+import kotlin.math.pow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.File
-import kotlin.math.pow
 
 /**
- * Turns three review items into build failures.
+ * Turns three review items into build failures: FR-002 fixes eleven colours, SC-008 sets a 4.5:1
+ * contrast floor, and SC-009 forbids a twelfth reaching the screen. All three were things a
+ * reviewer had to check by eye; this checks them by arithmetic and by reading the source tree.
  *
- * FR-002 fixes eleven colours, SC-008 sets a 4.5:1 contrast floor, and SC-009 forbids a twelfth
- * colour reaching the screen. All three were things a reviewer had to check by eye; this file
- * checks them by arithmetic and by reading the source tree.
- *
- * It runs on the JVM with no Android framework and no Robolectric, because
- * `androidx.compose.ui.graphics.Color` is a pure-Kotlin value class — the contrast maths is just
- * maths (research R13).
+ * It runs on the JVM with no framework, because `Color` is a pure-Kotlin value class.
  */
 class SlowLockPaletteTest {
 
@@ -55,11 +51,9 @@ class SlowLockPaletteTest {
     }
 
     /**
-     * Guards the resource copy of the ground colour.
-     *
-     * `Theme.SlowLock`'s `windowBackground` is an XML resource, so it cannot reference the Kotlin
-     * token (contract C5). The duplication is unavoidable; the drift is not. If these two ever
-     * disagree, every cold launch flashes one colour and settles on another.
+     * Guards the resource copy of the ground colour. `Theme.SlowLock`'s `windowBackground` is XML,
+     * so it cannot reference the Kotlin token (C5) — the duplication is unavoidable, the drift is
+     * not. If these disagree, every cold launch flashes one colour and settles on another.
      */
     @Test
     fun `the window background resource matches the Bone token`() {
@@ -89,11 +83,8 @@ class SlowLockPaletteTest {
     }
 
     /**
-     * The rule that gives `AmberDark` a reason to exist.
-     *
-     * Bright amber on the ground measures 2.76:1. C2 makes it a fill, a border and a rule — never
-     * a glyph — and this test is what stops someone quietly adding it to [TextPairings] to make a
-     * design read "warmer".
+     * The rule that gives `AmberDark` a reason to exist: bright amber on the ground measures
+     * 2.76:1, so C2 makes it a fill, a border and a rule — never a glyph.
      */
     @Test
     fun `bright amber is not a legible text colour on any ground`() {
@@ -113,11 +104,9 @@ class SlowLockPaletteTest {
     // ---- SC-009: no colour outside the palette reaches a screen --------------------------
 
     /**
-     * Scans the source tree for colour literals.
-     *
-     * This is the only mechanism that actually enforces SC-009. Asserting the palette's size
-     * proves the *declared* set is eleven; it proves nothing about a screen that writes
-     * `Color(0xFFBADA55)` inline. Only `Color.kt` may hold a literal.
+     * Scans the source tree for colour literals — the only mechanism that actually enforces SC-009.
+     * The palette's size proves the *declared* set is eleven; it proves nothing about a screen that
+     * writes `Color(0xFFBADA55)` inline. Only `Color.kt` may hold a literal.
      */
     @Test
     fun `no source file outside Color_kt declares a colour literal`() {

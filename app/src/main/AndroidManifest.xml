@@ -24,6 +24,7 @@
         a restore is strictly worse than a fresh start.
     -->
     <application
+        android:name=".SlowLockApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
