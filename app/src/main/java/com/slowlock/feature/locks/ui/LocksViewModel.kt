@@ -10,7 +10,6 @@ import com.slowlock.feature.locks.domain.PinnedShortcutsRepository
 import com.slowlock.feature.locks.domain.assembleLocks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,28 +46,30 @@ class LocksViewModel @Inject constructor(
      * Re-reads the locks, their configuration and their display facts — one pass, off the main
      * thread (FR-040).
      *
-     * Called on every `ON_START` — which covers first launch, the return to the foreground, the
-     * return from an uninstall and a language change, with nothing left running while the app is
-     * away (SC-013) — and on completing the flow (N8). The latter needs its own call because it is
-     * *not* a lifecycle event: the launcher's pin dialog does not reliably stop the activity, so a
-     * new lock would otherwise sit unseen until the app was next backgrounded. The returned [Job]
-     * lets the root wait for the read before it navigates, so the lock is there in the first frame.
+     * Called on the Home entry's every `ON_RESUME`, which covers first launch, the return to the
+     * foreground, the return from an uninstall, a language change, and the pop back from a
+     * completed flow — including the case that needed its own call before: the launcher's pin
+     * dialog does not reliably stop the activity, so `ON_START` alone would leave a new lock unseen
+     * until the app was next backgrounded (N8, research R9).
      *
      * A refresh over a populated list replaces the rows in place and never clears `loaded` (FR-016)
      * — see [LocksUiState.withLocks], where that rule lives so a test can reach it.
      */
-    fun refresh(): Job = viewModelScope.launch {
-        // The list is derived from the launcher, not read from a record (FR-003a): a lock exists
-        // exactly when its shortcut is pinned, which is what makes the screen agree with the home
-        // screen — a declined pin dialog never creates one, and an icon dragged off takes its lock.
-        //
-        // `null` is not an empty set. It means the launcher could not be asked, and the only safe
-        // reading of "we don't know" is the last list that was known good.
-        val pinned = pinnedShortcuts.pinnedIds()
-        val packages =
-            if (pinned == null) lockOrder.loadOrder() else lockOrder.deriveOrder(pinned)
-        val locks = assembleLocks(packages, config::load, targets::resolve)
-        _uiState.update { it.withLocks(locks) }
+    fun refresh() {
+        viewModelScope.launch {
+            // The list is derived from the launcher, not read from a record (FR-003a): a lock
+            // exists exactly when its shortcut is pinned, which is what makes the screen agree
+            // with the home screen — a declined pin dialog never creates one, and an icon dragged
+            // off takes its lock.
+            //
+            // `null` is not an empty set. It means the launcher could not be asked, and the only
+            // safe reading of "we don't know" is the last list that was known good.
+            val pinned = pinnedShortcuts.pinnedIds()
+            val packages =
+                if (pinned == null) lockOrder.loadOrder() else lockOrder.deriveOrder(pinned)
+            val locks = assembleLocks(packages, config::load, targets::resolve)
+            _uiState.update { it.withLocks(locks) }
+        }
     }
 
     /**

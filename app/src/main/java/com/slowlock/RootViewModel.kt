@@ -2,10 +2,6 @@ package com.slowlock
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.slowlock.core.domain.AppIconRepository
-import com.slowlock.core.domain.AppTargetRepository
-import com.slowlock.core.domain.DelayConfig
-import com.slowlock.core.domain.DelayConfigRepository
 import com.slowlock.feature.shortcut.domain.PinSupport
 import com.slowlock.feature.shortcut.domain.PinSupportRepository
 import com.slowlock.feature.shortcut.domain.pinSupport
@@ -17,23 +13,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * The launcher's pin support, and the configuration read that precedes navigation.
+ * The launcher's pin support: whether this launcher will take a pinned shortcut at all.
  *
- * The navigation stage is deliberately not here: which screen is showing is presentation state, and
- * `rememberSaveable` in [SlowLockRoot] already delivers the specified process-death restore. Moving
- * it to a `SavedStateHandle` would put that at risk for no principle gained (FR-023a).
+ * **The one holder scoped above the graph, deliberately** (FR-016). Pin support decides whether the
+ * graph renders at all and is re-read on every return to the foreground, because the user can
+ * change launcher while the app is away. It belongs to no screen, so there is no entry to scope it
+ * to — see the plan's Complexity Tracking for the two alternatives that were rejected.
  */
 @HiltViewModel
 class RootViewModel @Inject constructor(
-    private val config: DelayConfigRepository,
     private val pinSupport: PinSupportRepository,
-    /**
-     * Handed to `DelayConfigScreen`, which deliberately has no state holder of its own (FR-023,
-     * V4). It still has to resolve a label and an icon, and the root is the only place those can
-     * come from without the screen constructing a data source at a point of use (FR-024).
-     */
-    val targets: AppTargetRepository,
-    val icons: AppIconRepository,
 ) : ViewModel() {
 
     private val _support = MutableStateFlow<PinSupport>(PinSupport.Unknown)
@@ -54,14 +43,4 @@ class RootViewModel @Inject constructor(
     fun refreshSupport() {
         viewModelScope.launch { _support.value = pinSupport.current() }
     }
-
-    /**
-     * The saved configuration for [packageName], read *before* the root navigates (N1), so the
-     * delay screen's first composition already carries the saved values and never shows the default
-     * and then corrects itself.
-     *
-     * Never null: an app with nothing stored answers [DelayConfig.DEFAULT], so "configured" and
-     * "unconfigured" are one code path with no branch to forget.
-     */
-    suspend fun configFor(packageName: String): DelayConfig = config.load(packageName)
 }

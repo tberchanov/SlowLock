@@ -1,6 +1,5 @@
 package com.slowlock.feature.apps.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,11 +72,10 @@ fun AppListScreen(
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // This entry's `ON_START`, so it also fires when the user pops back into the list from the
+    // delay step. That extra enumeration is redundant — nothing can be installed without leaving
+    // the app — and is accepted rather than guarded against (research R6).
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refresh() }
-
-    // FR-030: the system gesture and the on-screen tile are the same exit, so they call the same
-    // lambda rather than each arriving at the root by their own route.
-    BackHandler { onBack() }
 
     // One-shot messages, collected rather than read off the state (FR-038): consuming a value
     // removes it, so no recomposition can show the same message twice. The event carries a resource

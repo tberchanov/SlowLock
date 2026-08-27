@@ -25,8 +25,8 @@ Each item needs its own answer.
 | F-02 | T018 | Low | Kotlin 2.3.21 flags an unreachable cast in `SlowLockPaletteTest` | 🟡 Open — no action proposed |
 | F-03 | T003 | Info | `contracts/frozen-values.md` lists `DEFAULT_SECONDS` as frozen; source says otherwise | 🟡 Open — doc correction available |
 | F-04 | T003 | Info | T006 duplicates an assertion already in `DelayConfigTest` | 🟡 **Open — T074 ruled: keep both.** Ruling reversible |
-| F-05 | T046 | **Medium** | The treatment selection stayed in `rememberSaveable` instead of moving to the state holder | 🟡 **Open — a deliberate divergence from T046's wording** |
-| F-06 | T050 | Medium | `RootViewModel` gained two repositories beyond `injection-graph.md`'s list | 🟡 Open — forced by V4 |
+| F-05 | T046 | **Medium** | The treatment selection stayed in `rememberSaveable` instead of moving to the state holder | ✅ **Closed** — resolved by construction in 010 |
+| F-06 | T050 | Medium | `RootViewModel` gained two repositories beyond `injection-graph.md`'s list | ✅ **Closed** — resolved by construction in 010 |
 | F-07 | T047 | Medium | `ElapsedClock` added; not in `data-model.md` | 🟡 Open — required by T076 |
 | F-08 | T047/T052 | Medium | The wait decides the hand-off; the window performs it | 🟡 Open — divergence from T047's wording |
 | F-09 | T043 | **Medium** | The app-list tap now requires a *label*, not just a launch intent | 🟡 **Open — a real, narrow behaviour divergence (FR-001)** |
@@ -203,7 +203,13 @@ whose existing mechanism already delivers a specified restore behaviour stays wh
 **What reversing it would cost**: the four rows above have to be re-satisfied by some other
 mechanism. I could not find one that satisfies all four.
 
-**Ruling**: _pending_
+**Ruling**: **closed — resolved by construction, not by a fix.** Feature 010 adopts the navigation
+library, and a holder obtained inside a destination is scoped to that back stack entry rather than
+to the `Activity`. The fourth column of the table above is no longer the choice it describes: an
+entry-scoped `hiltViewModel()` satisfies all four rows, because rows 3 and 4 are delivered by the
+entry being popped and rows 1 and 2 by the holder and its saved-state handle. The selection now
+lives in `ShortcutConfigViewModel`, which is where T046 asked for it. Nothing was fixed here —
+the constraint that made the divergence necessary was removed.
 
 ---
 
@@ -227,7 +233,13 @@ the contract anticipated.
 `SlowLockRoot` (more UI plumbing, same coupling); a Hilt `EntryPoint` in the composable (a service
 locator, prohibited outright).
 
-**Ruling**: _pending — or give `DelayConfigScreen` a holder after all, which reverses V4_
+**Ruling**: **closed — resolved by construction, not by a fix.** Feature 010 gives the delay screen
+`DelayConfigViewModel`, scoped to its own back stack entry, which reverses V4 as the alternative
+above anticipated. That holder owns the delay being edited and the R8 load-versus-restore branch,
+so it is not the forwarding-only holder V4 was written to prevent. `RootViewModel` now takes
+`PinSupportRepository` alone, which is fewer collaborators than `injection-graph.md` listed —
+`DelayConfigRepository` went with `configFor()`. No repository is exposed on another screen's
+behalf anywhere in the app (010 contract S6).
 
 ---
 

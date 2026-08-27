@@ -3,7 +3,7 @@ package com.slowlock.feature.locks.ui
 import com.slowlock.feature.locks.domain.Lock
 
 /**
- * What the root's [com.slowlock.Stage.Home] branch is showing.
+ * What the `Home` destination is showing.
  *
  * Three fields, and every screen decision is derived from them rather than stored beside them (N2,
  * FR-019a): not loaded renders nothing, loaded-and-empty renders [IntroScreen] (FR-017), and loaded

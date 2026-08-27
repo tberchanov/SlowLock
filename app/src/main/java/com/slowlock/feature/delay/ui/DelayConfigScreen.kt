@@ -1,6 +1,5 @@
 package com.slowlock.feature.delay.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,9 +24,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,10 +36,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.slowlock.R
-import com.slowlock.core.domain.AppIconRepository
-import com.slowlock.core.domain.AppTarget
-import com.slowlock.core.domain.AppTargetRepository
+import com.slowlock.core.domain.IconTreatment
 import com.slowlock.feature.delay.domain.DelayRange
 import com.slowlock.ui.components.PrimaryAction
 import com.slowlock.ui.components.ScreenHeader
@@ -53,9 +51,12 @@ import kotlin.math.roundToInt
 /**
  * How long to wait before the target opens.
  *
- * The screen owns no state: [onSecondsChange] is the only way a value leaves it, and it never
- * touches `DelayConfigStore` — the root loads the saved value before it navigates and hands it in
- * (D9, contract S2).
+ * The delay lives in [DelayConfigViewModel], scoped to this destination's back stack entry, so it
+ * survives the trip to the icon step and back and dies when the step is left (G2).
+ *
+ * The readout is withheld until the configuration read returns rather than showing the default and
+ * correcting itself (FR-002(c), FR-019) — the same withholding the app pill already does while the
+ * target resolves.
  *
  * Which preset appears selected is derived, never stored: the row asks `DelayRange.presetFor` at
  * composition time, which makes "dragged to 17 seconds, so nothing is highlighted" correct by
@@ -69,32 +70,17 @@ import kotlin.math.roundToInt
 @Composable
 fun DelayConfigScreen(
     packageName: String,
-    seconds: Int,
-    onSecondsChange: (Int) -> Unit,
-    onNext: () -> Unit,
+    /** Carries the delay and the treatment on to the last step (contract, `DelayConfig` edges). */
+    onNext: (delaySeconds: Int, treatment: IconTreatment) -> Unit,
     onBack: () -> Unit,
-    /**
-     * Supplied by the root rather than constructed here (FR-024). This screen deliberately has no
-     * state holder (FR-023, V4) — a `ViewModel` here would hold nothing and forward everything.
-     */
-    targets: AppTargetRepository,
-    icons: AppIconRepository,
     modifier: Modifier = Modifier,
+    viewModel: DelayConfigViewModel = hiltViewModel(),
 ) {
-    BackHandler { onBack() }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(packageName) { viewModel.start(packageName) }
 
-    val targetState by produceState<TargetState>(TargetState.Resolving, packageName) {
-        value = TargetState.Resolving
-        value = targets.resolve(packageName)
-            ?.let(TargetState::Resolved)
-            ?: TargetState.Missing
-    }
-    val target = (targetState as? TargetState.Resolved)?.target
-    val icon by produceState<ImageBitmap?>(null, target) {
-        value = null
-        val resolved = target ?: return@produceState
-        value = icons.icon(resolved.packageName, resolved.versionCode)
-    }
+    val target = state.target
+    val icon = state.icon
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -124,25 +110,34 @@ fun DelayConfigScreen(
                 verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
             ) {
                 when {
-                    targetState is TargetState.Missing ->
-                        Message(stringResource(R.string.app_list_unavailable))
+                    state.missing -> Message(stringResource(R.string.app_list_unavailable))
                     // Resolving: nothing, deliberately. A spinner for a package-manager lookup
                     // that takes milliseconds is a flash, not feedback.
                     target == null -> Unit
                     else -> AppPill(label = target.label, icon = icon)
                 }
-                Readout(seconds = seconds, modifier = Modifier.weight(1f, fill = false))
+                // Withheld rather than defaulted: a number that appears and then changes is the
+                // defect FR-013 names, and this screen has never shown one.
+                if (state.loaded) {
+                    Readout(seconds = state.seconds, modifier = Modifier.weight(1f, fill = false))
+                }
             }
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(26.dp),
             ) {
-                DelaySlider(seconds = seconds, onSecondsChange = onSecondsChange)
-                PresetRow(seconds = seconds, onSecondsChange = onSecondsChange)
+                DelaySlider(
+                    seconds = state.seconds,
+                    onSecondsChange = viewModel::onSecondsChanged,
+                )
+                PresetRow(
+                    seconds = state.seconds,
+                    onSecondsChange = viewModel::onSecondsChanged,
+                )
                 PrimaryAction(
                     label = stringResource(R.string.delay_config_next),
-                    onClick = onNext,
+                    onClick = { onNext(state.seconds, state.treatment) },
                     modifier = Modifier.padding(bottom = 20.dp),
                 )
             }
@@ -358,12 +353,6 @@ private fun Message(text: String, modifier: Modifier = Modifier) {
         textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )
-}
-
-private sealed interface TargetState {
-    data object Resolving : TargetState
-    data class Resolved(val target: AppTarget) : TargetState
-    data object Missing : TargetState
 }
 
 private val SCREEN_PADDING = 20.dp

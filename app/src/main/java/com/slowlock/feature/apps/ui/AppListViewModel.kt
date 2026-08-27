@@ -75,7 +75,9 @@ class AppListViewModel @Inject constructor(
 
     /**
      * Records the query; the filtering itself is derived in [AppListUiState.visibleApps]. Mirrored
-     * into [SavedStateHandle] so it survives process death, which the ViewModel does not (FR-017).
+     * into [SavedStateHandle] so it survives process death within one visit; the handle belongs to
+     * this screen's back stack entry, so leaving the list for good takes the query with it
+     * (FR-002(a), obligation G5).
      */
     fun onQueryChanged(query: String) {
         savedState[QUERY_KEY] = query

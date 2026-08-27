@@ -1,6 +1,7 @@
 package com.slowlock.feature.shortcut.ui
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.slowlock.R
@@ -23,13 +24,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Owns the shortcut screen's resolution, its icon, and the write-then-pin that ends the flow. Every
- * collaborator arrives through the constructor (FR-021, FR-024).
+ * Owns the shortcut screen's resolution, its icon, the treatment selection, and the write-then-pin
+ * that ends the flow. Every collaborator arrives through the constructor (FR-021, FR-024).
  *
- * The treatment selection is deliberately not held here — it stays `rememberSaveable` in
- * [ShortcutConfigScreen], because its drop-on-exit lifetime is specified behaviour delivered by the
- * root's `SaveableStateHolder`, and a holder scoped to the Activity would carry an abandoned choice
- * into the next app the user configures.
+ * Obtained inside the `ShortcutConfig` destination, so this holder dies when that entry is popped —
+ * which is what discards an abandoned treatment rather than carrying it into the next app the user
+ * configures.
  */
 @HiltViewModel
 class ShortcutConfigViewModel @Inject constructor(
@@ -37,9 +37,10 @@ class ShortcutConfigViewModel @Inject constructor(
     private val icons: AppIconRepository,
     private val config: DelayConfigRepository,
     private val pins: ShortcutPinRepository,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ShortcutConfigUiState())
+    private val _uiState = MutableStateFlow(ShortcutConfigUiState(treatment = openingTreatment()))
     val uiState: StateFlow<ShortcutConfigUiState> = _uiState.asStateFlow()
 
     private val _messages = Channel<Int>(Channel.BUFFERED)
@@ -57,7 +58,8 @@ class ShortcutConfigViewModel @Inject constructor(
      */
     fun start(packageName: String) {
         viewModelScope.launch {
-            _uiState.value = ShortcutConfigUiState()
+            // Fresh but for the selection, which belongs to the visit rather than to the lookup.
+            _uiState.update { ShortcutConfigUiState(treatment = it.treatment) }
             val target = targets.resolve(packageName)
             if (target == null) {
                 _uiState.update { it.copy(resolving = false, target = null, missing = true) }
@@ -71,6 +73,15 @@ class ShortcutConfigViewModel @Inject constructor(
     }
 
     /**
+     * Records the chosen treatment, mirrored into [SavedStateHandle] so it survives process death,
+     * which this holder does not.
+     */
+    fun onTreatmentSelected(treatment: IconTreatment) {
+        savedState[SELECTION_KEY] = treatment
+        _uiState.update { it.copy(treatment = treatment) }
+    }
+
+    /**
      * Re-resolve, save, pin, then report — in that order, and the order is the contract.
      *
      * The target may have been uninstalled while this screen sat open, so the resolution at tap
@@ -81,7 +92,8 @@ class ShortcutConfigViewModel @Inject constructor(
      * Creating a lock is not a write: a lock exists exactly when its shortcut is pinned, so the pin
      * request creates it — and only if the user accepts the launcher's dialog.
      */
-    fun create(packageName: String, delaySeconds: Int, treatment: IconTreatment, onCreated: () -> Unit) {
+    fun create(packageName: String, delaySeconds: Int, onCreated: () -> Unit) {
+        val treatment = _uiState.value.treatment
         _uiState.update { it.copy(creating = true) }
         viewModelScope.launch {
             val fresh = targets.resolve(packageName)
@@ -97,6 +109,27 @@ class ShortcutConfigViewModel @Inject constructor(
             pins.requestPin(fresh, treatment)
             onCreated()
         }
+    }
+
+    /**
+     * A selection restored from the handle, or the app's saved treatment carried on the route.
+     *
+     * **The restored selection wins** (research R8): the handle only holds one after the user chose
+     * it, so preferring the route argument would silently replace a choice made before the process
+     * died with the value that was already on disk.
+     */
+    private fun openingTreatment(): IconTreatment =
+        savedState[SELECTION_KEY]
+            ?: savedState[ROUTE_TREATMENT_KEY]
+            ?: IconTreatment.entries.first()
+
+    private companion object {
+
+        /** The `treatment` argument of the `ShortcutConfig` route, keyed by its property name. */
+        const val ROUTE_TREATMENT_KEY = "treatment"
+
+        /** Distinct from [ROUTE_TREATMENT_KEY]: the same key would overwrite the argument. */
+        const val SELECTION_KEY = "selectedTreatment"
     }
 }
 
@@ -117,6 +150,7 @@ data class ShortcutConfigUiState(
     val icon: ImageBitmap? = null,
     val iconFailed: Boolean = false,
     val creating: Boolean = false,
+    val treatment: IconTreatment = IconTreatment.entries.first(),
 ) {
 
     /** The create action is live only with a target, an icon, and nothing already in flight. */

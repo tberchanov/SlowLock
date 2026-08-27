@@ -64,12 +64,15 @@ grep -rn "Dispatchers\.\(IO\|Default\)" app/src/main/java --include=*.kt | grep 
 
 # no Application-typed state holders left
 grep -rn "AndroidViewModel\|@JvmOverloads" app/src/main/java --include=*.kt
-
-# no data source constructed in a composable
-grep -rn "remember.*\(Store\|Cache\|Pinner\|Source\)(" app/src/main/java --include=*.kt
 ```
 
-All three must return nothing.
+Both must return nothing.
+
+> A third check here scanned for a data source constructed in a composable
+> (`remember.*\(Store\|Cache\|Pinner\|Source\)(`). It was removed: its only match was ever
+> `remember { MutableInteractionSource() }`, a Compose interaction primitive and not a data source
+> (F-11), and the holder shape it scanned for no longer exists — every screen's collaborators now
+> arrive through its entry-scoped `ViewModel`.
 
 ### Stage 3 — Move
 
@@ -88,8 +91,10 @@ The layering gates. All three must return nothing:
 ```bash
 SRC=app/src/main/java/com/slowlock
 
-# FR-025 — no platform import inside a domain package
-grep -rn "^import android" $SRC/core/domain/ $SRC/feature/*/domain/
+# FR-025 — no platform import inside a domain package.
+# `android\.` with the dot, so the pattern does not also catch every `androidx` import (F-12);
+# `AppIconRepository`'s declared `ImageBitmap` is Compose's type, not the framework's.
+grep -rn "^import android\." $SRC/core/domain/ $SRC/feature/*/domain/
 
 # FR-026 — a domain file may not import a ui or data package
 grep -rnE "^import com\.slowlock\.(core|feature\.[a-z]+)\.(ui|data)\." \

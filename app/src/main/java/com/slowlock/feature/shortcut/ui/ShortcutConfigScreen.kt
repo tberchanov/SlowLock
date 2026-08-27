@@ -1,6 +1,5 @@
 package com.slowlock.feature.shortcut.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -24,10 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,8 +57,7 @@ import com.slowlock.ui.theme.SlowLockType
  * The `create` path is resolve fresh, save, pin, then `onCreated`, in that order — the target is
  * re-resolved at the moment of the tap because it may have been uninstalled while this screen was
  * open (contract S3). Nothing writes a lock record: a lock *is* its pinned shortcut (FR-003a), so
- * `pin()` already creates it. `initialTreatment` is the app's *saved* treatment loaded by the root,
- * not a default.
+ * `pin()` already creates it.
  *
  * The title reads "New lock" where the design source reads "New shortcut": the terminology decision
  * post-dates the artboard, so this is a deliberate divergence, not drift (FR-041).
@@ -71,30 +66,17 @@ import com.slowlock.ui.theme.SlowLockType
 fun ShortcutConfigScreen(
     packageName: String,
     delaySeconds: Int,
-    initialTreatment: IconTreatment,
     onBack: () -> Unit,
     onCreated: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ShortcutConfigViewModel = hiltViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    BackHandler { onBack() }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(packageName) { viewModel.start(packageName) }
 
-    /*
-     * The treatment selection stays in `rememberSaveable` deliberately: its lifetime is specified
-     * behaviour. The root drops `CONFIG_KEY` from its `SaveableStateHolder` on every exit from the
-     * flow (N3), so a saveable inside that holder survives rotation and process death and dies when
-     * the flow is left — exactly what stops an abandoned choice reappearing for a different app.
-     *
-     * A `hiltViewModel()` here would be scoped to the Activity's store, outlive the exit, and carry
-     * the abandoned treatment forward; keying a reset on the package would instead lose the choice
-     * across process death (FR-023a is the precedent).
-     */
-    var treatment by rememberSaveable { mutableStateOf(initialTreatment) }
-
+    val treatment = state.treatment
     val target = state.target
     val icon = state.icon
 
@@ -119,8 +101,7 @@ fun ShortcutConfigScreen(
                 .padding(contentPadding)
                 .padding(horizontal = SCREEN_PADDING),
         ) {
-            // Step 3 of 3 (005 FR-029). The `BackHandler` this screen already had is what
-            // FR-030 asks for and is unchanged.
+            // Step 3 of 3 (005 FR-029).
             ScreenHeader(
                 title = stringResource(R.string.shortcut_config_title),
                 onBack = onBack,
@@ -157,7 +138,7 @@ fun ShortcutConfigScreen(
             ) {
                 TreatmentSection(
                     selected = treatment,
-                    onSelect = { treatment = it },
+                    onSelect = viewModel::onTreatmentSelected,
                     icon = icon,
                 )
                 Column(
@@ -171,7 +152,6 @@ fun ShortcutConfigScreen(
                             viewModel.create(
                                 packageName = packageName,
                                 delaySeconds = delaySeconds,
-                                treatment = treatment,
                                 onCreated = onCreated,
                             )
                         },
